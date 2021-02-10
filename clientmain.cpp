@@ -10,6 +10,7 @@
 #include <unistd.h>
 
 #define SERVERPORT "5000"
+#define MAXDATA 1000
 
 // Enable if you want debugging to be printed, see examble below.
 // Alternative, pass 
@@ -46,6 +47,8 @@ int main(int argc, char *argv[])
   struct addrinfo addrs, *ptr;
   int server_socket;
   int returnValue;
+  int numbrBytes;
+  char buf[MAXDATA];
 
   memset(&addrs, 0, sizeof(addrs));
   addrs.ai_family = AF_INET;
@@ -79,4 +82,13 @@ int main(int argc, char *argv[])
   {
     perror("Client: Failed to connect \n");
   }
+
+  numbrBytes = recv(server_socket, buf, MAXDATA -1, 0);
+  if (numbrBytes == -1)
+  {
+    perror("Wrong with message \n");
+  }
+
+  printf("Client: Recieved '%s' \n", buf);
+  close(server_socket);
 }
