@@ -2,7 +2,14 @@
 #include <string.h>
 #include <stdlib.h>
 /* You will to add includes here */
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <netdb.h>
+#include <arpa/inet.h>
+#include <unistd.h>
 
+#define SERVERPORT "5000"
 
 // Enable if you want debugging to be printed, see examble below.
 // Alternative, pass 
@@ -32,9 +39,44 @@ int main(int argc, char *argv[])
 
   /* Do magic */
   int port=atoi(Destport);
-#ifdef DEBUG 
+  #ifdef DEBUG 
   printf("Host %s, and port %d.\n",Desthost,port);
-#endif
+  #endif
 
-  
+  struct addrinfo addrs, *ptr;
+  int server_socket;
+  int returnValue;
+
+  memset(&addrs, 0, sizeof(addrs));
+  addrs.ai_family = AF_INET;
+  addrs.ai_socktype = SOCK_STREAM;
+  addrs.ai_protocol = IPPROTO_TCP;
+
+  returnValue = getaddrinfo(argv[1], SERVERPORT, &addrs, &ptr);
+  if (returnValue != 0)
+  {
+    perror("Wrong getaddrinfo \n");
+  }
+
+  for (; ptr != NULL;)
+  {
+    server_socket = socket(ptr->ai_family, ptr->ai_socktype, ptr->ai_protocol);
+    if (server_socket == -1)
+    {
+      perror("Socket not created \n");
+    }
+
+    if (connect(server_socket, ptr->ai_addr, ptr->ai_addrlen) == -1)
+    {
+      close(server_socket);
+      perror("Server not connected \n");
+    }
+
+    break;
+  }
+
+  if (ptr == NULL)
+  {
+    perror("Client: Failed to connect \n");
+  }
 }
