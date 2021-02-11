@@ -45,7 +45,7 @@ int main(int argc, char *argv[])
   #endif
 
   struct addrinfo addrs, *ptr;
-  int server_socket;
+  int clientSocket;
   int returnValue;
   int numbrBytes;
   char buf[MAXDATA];
@@ -63,15 +63,15 @@ int main(int argc, char *argv[])
 
   for (; ptr != NULL;)
   {
-    server_socket = socket(ptr->ai_family, ptr->ai_socktype, ptr->ai_protocol);
-    if (server_socket == -1)
+    clientSocket = socket(ptr->ai_family, ptr->ai_socktype, ptr->ai_protocol);
+    if (clientSocket == -1)
     {
       perror("Socket not created \n");
     }
 
-    if (connect(server_socket, ptr->ai_addr, ptr->ai_addrlen) == -1)
+    if (connect(clientSocket, ptr->ai_addr, ptr->ai_addrlen) == -1)
     {
-      close(server_socket);
+      close(clientSocket);
       perror("Server not connected \n");
     }
 
@@ -83,12 +83,25 @@ int main(int argc, char *argv[])
     perror("Client: Failed to connect \n");
   }
 
-  numbrBytes = recv(server_socket, buf, MAXDATA -1, 0);
-  if (numbrBytes == -1)
+  while (1)
   {
-    perror("Wrong with message \n");
-  }
+    numbrBytes = recv(clientSocket, buf, MAXDATA, 0);
+    if (numbrBytes == -1)
+    {
+      perror("Wrong with message \n");
+    }
 
-  printf("Client: Recieved '%s' \n", buf);
-  close(server_socket);
+    printf("Client: Recieved '%s' \n", buf);
+
+    if (strcmp(buf, "TEXT TCP 1.0\n\n") == 0)
+    {
+      numbrBytes = send(clientSocket, "OK\n", 4, 0);
+      printf("Sent OK \n");
+      if (numbrBytes == -1)
+      {
+        perror("Send not got through \n");
+      }
+    }
+  }
+  close(clientSocket);
 }
