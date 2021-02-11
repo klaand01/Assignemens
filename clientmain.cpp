@@ -50,6 +50,10 @@ int main(int argc, char *argv[])
   int numbrBytes;
   char buf[MAXDATA];
 
+  char oper[5];
+  int iNumb1, iNumb2, iRes;
+  double dNumb1, dNumb2, dRes;
+
   memset(&addrs, 0, sizeof(addrs));
   addrs.ai_family = AF_INET;
   addrs.ai_socktype = SOCK_STREAM;
@@ -99,9 +103,75 @@ int main(int argc, char *argv[])
       printf("Sent OK \n");
       if (numbrBytes == -1)
       {
-        perror("Send not got through \n");
+        perror("Send 'OK' not got through \n");
       }
     }
+    else if (buf[0] == 'f')
+    {
+      sscanf(buf, "%s %lg %lg", oper, &dNumb1, &dNumb2);
+
+      if (strcmp(oper, "fadd") == 0)
+      {
+        dRes = dNumb1 + dNumb2;
+      }
+
+      else if (strcmp(oper, "fdiv") == 0)
+      {
+        dRes = dNumb1 / dNumb2;
+      }
+
+      else if (strcmp(oper, "mul") == 0)
+      {
+        dRes = dNumb1 * dNumb2;
+      }
+
+      else if (strcmp(oper, "fsub") == 0)
+      {
+        dRes = dNumb1 - dNumb2;
+      }
+
+      numbrBytes = send(clientSocket, &dRes, sizeof(dRes), 0);
+      printf("Sent answer %8.8g \n", dRes);
+      if (numbrBytes == -1)
+      {
+        perror("Answer not gone through \n");
+      }
+    }
+    else
+    {
+      sscanf(buf, "%s %d %d", oper, &iNumb1, &iNumb2);
+
+      if (strcmp(oper, "add") == 0)
+      {
+        iRes = iNumb1 + iNumb2;
+      }
+
+      else if (strcmp(oper, "div") == 0)
+      {
+        iRes = iNumb1 / iNumb2;
+      }
+
+      else if (strcmp(oper, "mul") == 0)
+      {
+        iRes = iNumb1 * iNumb2;
+      }
+
+      else if (strcmp(oper, "sub") == 0)
+      {
+        iRes = iNumb1 - iNumb2;
+      }
+
+      numbrBytes = send(clientSocket, &iRes, sizeof(iRes), 0);
+      printf("Sent answer %d \n", iRes);
+      if (numbrBytes == -1)
+      {
+        perror("Answer not gone through \n");
+      }
+    }
+
+    if (strcmp(buf, "OK") == 0)
+    {
+      close(clientSocket);
+    }
   }
-  close(clientSocket);
 }
