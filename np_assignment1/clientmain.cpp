@@ -65,21 +65,17 @@ int main(int argc, char *argv[])
     perror("Wrong getaddrinfo \n");
   }
 
-  for (; ptr != NULL;)
+  clientSocket = socket(ptr->ai_family, ptr->ai_socktype, ptr->ai_protocol);
+  if (clientSocket == -1)
   {
-    clientSocket = socket(ptr->ai_family, ptr->ai_socktype, ptr->ai_protocol);
-    if (clientSocket == -1)
-    {
-      perror("Socket not created \n");
-    }
+    perror("Socket not created \n");
+  }
 
-    if (connect(clientSocket, ptr->ai_addr, ptr->ai_addrlen) == -1)
-    {
-      close(clientSocket);
-      perror("Server not connected \n");
-    }
-
-    break;
+  returnValue = connect(clientSocket, ptr->ai_addr, ptr->ai_addrlen);
+  if (returnValue == -1)
+  {
+    close(clientSocket);
+    perror("Server not connected \n");
   }
 
   if (ptr == NULL)
