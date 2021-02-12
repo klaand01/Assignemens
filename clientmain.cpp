@@ -50,9 +50,9 @@ int main(int argc, char *argv[])
   int numbrBytes;
   char buf[MAXDATA];
 
-  char oper[5];
+  char oper[5], result[20];
   int iNumb1, iNumb2, iRes;
-  double dNumb1, dNumb2, dRes;
+  float fNumb1, fNumb2, fRes;
 
   memset(&addrs, 0, sizeof(addrs));
   addrs.ai_family = AF_INET;
@@ -99,45 +99,49 @@ int main(int argc, char *argv[])
 
     if (strcmp(buf, "TEXT TCP 1.0\n\n") == 0)
     {
-      numbrBytes = send(clientSocket, "OK\n", 4, 0);
+      numbrBytes = send(clientSocket, "OK\n", strlen("OK\n"), 0);
       printf("Sent OK \n");
       if (numbrBytes == -1)
       {
-        perror("Send 'OK' not got through \n");
+        perror("'OK' not gone through \n");
       }
     }
-    else if (buf[0] == 'f')
+
+    if (buf[0] == 'f')
     {
-      sscanf(buf, "%s %lg %lg", oper, &dNumb1, &dNumb2);
+      sscanf(buf, "%s %f %f", oper, &fNumb1, &fNumb2);
 
       if (strcmp(oper, "fadd") == 0)
       {
-        dRes = dNumb1 + dNumb2;
+        fRes = fNumb1 + fNumb2;
       }
 
       else if (strcmp(oper, "fdiv") == 0)
       {
-        dRes = dNumb1 / dNumb2;
+        fRes = fNumb1 / fNumb2;
       }
 
-      else if (strcmp(oper, "mul") == 0)
+      else if (strcmp(oper, "fmul") == 0)
       {
-        dRes = dNumb1 * dNumb2;
+        fRes = fNumb1 * fNumb2;
       }
 
       else if (strcmp(oper, "fsub") == 0)
       {
-        dRes = dNumb1 - dNumb2;
+        fRes = fNumb1 - fNumb2;
       }
 
-      numbrBytes = send(clientSocket, &dRes, sizeof(dRes), 0);
-      printf("Sent answer %8.8g \n", dRes);
+      sprintf(result, "%f\n", fRes);
+      numbrBytes = send(clientSocket, result, strlen(result), 0);
+      printf("Sent answer %s", result);
+      
       if (numbrBytes == -1)
       {
         perror("Answer not gone through \n");
       }
     }
-    else
+    else if (buf[0] == 'a' || buf[0] == 'd' ||
+    buf[0] == 'm' || buf[0] == 's')
     {
       sscanf(buf, "%s %d %d", oper, &iNumb1, &iNumb2);
 
@@ -161,17 +165,21 @@ int main(int argc, char *argv[])
         iRes = iNumb1 - iNumb2;
       }
 
-      numbrBytes = send(clientSocket, &iRes, sizeof(iRes), 0);
-      printf("Sent answer %d \n", iRes);
+      sprintf(result, "%d\n", iRes);
+      numbrBytes = send(clientSocket, result, strlen(result), 0);
+      printf("Sent answer %s", result);
+
       if (numbrBytes == -1)
       {
         perror("Answer not gone through \n");
       }
     }
 
-    if (strcmp(buf, "OK") == 0)
+    //Kontroll
+    if (buf[0] == 'E' || buf[0] == 'O')
     {
-      close(clientSocket);
+      exit(1);
     }
   }
+  close(clientSocket);
 }
