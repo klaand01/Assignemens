@@ -78,11 +78,6 @@ int main(int argc, char *argv[])
     perror("Server not connected \n");
   }
 
-  if (ptr == NULL)
-  {
-    perror("Client: Failed to connect \n");
-  }
-
   while (1)
   {
     numbrBytes = recv(clientSocket, buf, MAXDATA, 0);
