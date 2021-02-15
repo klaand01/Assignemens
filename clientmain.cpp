@@ -25,6 +25,8 @@ int main(int argc, char *argv[])
   struct addrinfo addrs, *ptr;
   int clientSocket;
   int returnValue, sentBytes;
+  int operNumbr, iNumb1, iNumb2, iRes;
+  double dNumb1, dNumb2, dRes;
 
   memset(&addrs, 0, sizeof(addrs));
   addrs.ai_family = AF_UNSPEC;
@@ -47,7 +49,7 @@ int main(int argc, char *argv[])
     printf("Socket created \n");
   }
 
-
+  struct calcProtocol cProtocol;
   struct calcMessage cMessage;
   cMessage.type = htons(22);
   cMessage.message = htonl(0);
@@ -65,28 +67,98 @@ int main(int argc, char *argv[])
     printf("Message sent \n");
   }
 
-  sentBytes = recvfrom(clientSocket, &cMessage, sizeof(cMessage), 0, ptr->ai_addr, &ptr->ai_addrlen);
+
+  //Caclprotocol
+  sentBytes = recvfrom(clientSocket, &cProtocol, sizeof(cProtocol), 0, ptr->ai_addr, &ptr->ai_addrlen);
   if (sentBytes == -1)
   {
-    perror("Message not recieved \n");
+    perror("calcProtocol not recieved \n");
   }
   else
   {
-    printf("Message received \n");
+    printf("calcProtocol received \n");
   }
 
-  //Kontroll
-  if (ntohs(cMessage.message) == 2)
+
+  //Calcprotocol calculations
+  operNumbr = ntohl(cProtocol.arith);
+
+  if ((operNumbr >= 1) && (operNumbr <= 4))
   {
-    printf("NOT OKAY FOR SERVER \n");
-    close(clientSocket);
+    iNumb1 = ntohl(cProtocol.inValue1);
+    iNumb2 = ntohl(cProtocol.inValue2);
+
+    switch (operNumbr)
+    {
+      case 1:
+      iRes = iNumb1 + iNumb2;
+      break;
+
+      case 2:
+      iRes = iNumb1 - iNumb2;
+      break;
+
+      case 3:
+      iRes = iNumb1 * iNumb2;
+      break;
+
+      case 4:
+      iRes = iNumb1 / iNumb2;
+      break;
+    }
+
+    cProtocol.inResult = htonl(iRes);
   }
-  printf("Number on message: %d \n", ntohs(cMessage.message));
+  else if ((operNumbr >= 5) && (operNumbr <= 8))
+  {
+    dNumb1 = cProtocol.flValue1;
+    dNumb2 = cProtocol.flValue2;
 
+    switch (operNumbr)
+    {
+      case 5:
+      dRes = dNumb1 + dNumb2;
+      break;
 
+      case 6:
+      dRes = dNumb1 - dNumb2;
+      break;
+
+      case 7:
+      dRes = dNumb1 * dNumb2;
+      break;
+
+      case 8:
+      dRes = dNumb1 / dNumb2;
+      break;
+    }
+
+    cProtocol.flResult = dRes;
+  }
+
+  sentBytes = sendto(clientSocket, &cProtocol, sizeof(cProtocol), 0, ptr->ai_addr, ptr->ai_addrlen);
+  if (sentBytes == -1)
+  {
+    perror("Answer not sent \n");
+  }
+
+  sentBytes = recvfrom(clientSocket, &cMessage, sizeof(cMessage), 0, ptr->ai_addr, &ptr->ai_addrlen);
+  if (sentBytes == -1)
+  {
+    perror("Correction not recieved \n");
+  }
   
 
-
+  //Final control
+  if (ntohl(cMessage.message) == 1)
+  {
+    printf("OK \n");
+  }
+  else if (ntohl(cMessage.message) == 2)
+  {
+    printf("NOT OK \n");
+    close(clientSocket);
+  }
 
   close(clientSocket);
 }
