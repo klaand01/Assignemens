@@ -12,7 +12,7 @@
 
 #define SERVERPORT "5000"
 
-//#include "protocol.h"
+#include "protocol.h"
 
 int main(int argc, char *argv[])
 {
@@ -24,7 +24,7 @@ int main(int argc, char *argv[])
 
   struct addrinfo addrs, *ptr;
   int clientSocket;
-  int returnValue;
+  int returnValue, sentBytes;
 
   memset(&addrs, 0, sizeof(addrs));
   addrs.ai_family = AF_UNSPEC;
@@ -44,36 +44,49 @@ int main(int argc, char *argv[])
   }
   else
   {
-    printf("Socket created! \n");
+    printf("Socket created \n");
   }
 
-  //Creating calcMessage
-  struct message
+
+  struct calcMessage cMessage;
+  cMessage.type = htons(22);
+  cMessage.message = htonl(0);
+  cMessage.protocol = htons(17);
+  cMessage.major_version = htons(1);
+  cMessage.minor_version = htons(0);
+
+  sentBytes = sendto(clientSocket, &cMessage, sizeof(cMessage), 0, ptr->ai_addr, ptr->ai_addrlen);
+  if (sentBytes == -1)
   {
-    int32_t type;
-    int32_t message;
-    int32_t protocol;
-
-    int32_t majorVersion;
-    int32_t minorVersion;
-  };
-
-  struct message calcMessage;
-  calcMessage.type = htons(22);
-  calcMessage.message = htons(0);
-  calcMessage.protocol = 17;
-  calcMessage.majorVersion = 1;
-  calcMessage.minorVersion = 0;
-
-  returnValue = sendto(clientSocket, &calcMessage, sizeof(calcMessage), 0, ptr->ai_addr, ptr->ai_addrlen);
-  if (returnValue == -1)
-  {
-    printf("Message not sent");
+    perror("Message not sent \n");
   }
   else
   {
-    printf("Message sent\n");
+    printf("Message sent \n");
   }
+
+  sentBytes = recvfrom(clientSocket, &cMessage, sizeof(cMessage), 0, ptr->ai_addr, &ptr->ai_addrlen);
+  if (sentBytes == -1)
+  {
+    perror("Message not recieved \n");
+  }
+  else
+  {
+    printf("Message received \n");
+  }
+
+  //Kontroll
+  if (ntohs(cMessage.message) == 2)
+  {
+    printf("NOT OKAY FOR SERVER \n");
+    close(clientSocket);
+  }
+  printf("Number on message: %d \n", ntohs(cMessage.message));
+
+
+  
+
+
 
   close(clientSocket);
 }
