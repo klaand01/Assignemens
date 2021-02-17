@@ -21,8 +21,12 @@ int main(int argc, char *argv[])
   /* Do magic */
   if (argc != 3)
   {
-    printf("Usage: %s hostname:port (%d)\n", argv[0], argc);
+    printf("Usage: %s hostname port (%d)\n", argv[0], argc);
   }
+
+  char *ipAddr = argv[1];
+  int port = atoi(argv[2]);
+  printf("Host %s and port %d \n", ipAddr, port);
 
   struct addrinfo addrs, *ptr;
   int clientSocket, returnValue, sentBytes;
@@ -71,7 +75,7 @@ int main(int argc, char *argv[])
   if (ntohl(cMessage.message) == 2)
   {
     printf("NOT OK \n");
-    close(clientSocket);
+    exit(1);
   }
   else
   {
@@ -123,21 +127,26 @@ int main(int argc, char *argv[])
       {
         case 1:
         iRes = iNumb1 + iNumb2;
+        printf("ASSIGNMENT: add %d %d \n", iNumb1, iNumb2);
         break;
 
         case 2:
         iRes = iNumb1 - iNumb2;
+        printf("ASSIGNMENT: sub %d %d \n", iNumb1, iNumb2);
         break;
 
         case 3:
         iRes = iNumb1 * iNumb2;
+        printf("ASSIGNMENT: mul %d %d \n", iNumb1, iNumb2);
         break;
 
         case 4:
         iRes = iNumb1 / iNumb2;
+        printf("ASSIGNMENT: div %d %d \n", iNumb1, iNumb2);
         break;
       }
 
+      printf("Result: %d \n", iRes);
       cProtocol.inResult = htonl(iRes);
     }
     else if ((operNumbr >= 5) && (operNumbr <= 8))
@@ -149,21 +158,26 @@ int main(int argc, char *argv[])
       {
         case 5:
         dRes = dNumb1 + dNumb2;
+        printf("ASSIGNMENT: fadd %f %f \n", dNumb1, dNumb2);
         break;
 
         case 6:
         dRes = dNumb1 - dNumb2;
+        printf("ASSIGNMENT: fsub %f %f \n", dNumb1, dNumb2);
         break;
 
         case 7:
         dRes = dNumb1 * dNumb2;
+        printf("ASSIGNMENT: fmul %f %f \n", dNumb1, dNumb2);
         break;
 
         case 8:
         dRes = dNumb1 / dNumb2;
+        printf("ASSIGNMENT: fdiv %f %f \n", dNumb1, dNumb2);
         break;
       }
 
+      printf("Result: %f \n", dRes);
       cProtocol.flResult = dRes;
     }
 
@@ -202,7 +216,11 @@ int main(int argc, char *argv[])
       exit(1);
     }
 
-    printf("OK \n");
+    if (ntohl(cMessage.message) == 1)
+    {
+      printf("OK \n");
+      exit(1);
+    }
   }
 
   close(clientSocket);
