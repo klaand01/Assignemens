@@ -9,7 +9,7 @@
 #include <arpa/inet.h>
 #include <unistd.h>
 
-#define SERVERPORT "5000"
+#define SERVERPORT "5001"
 #define MAXDATA 1000
 
 // Enable if you want debugging to be printed, see examble below.
