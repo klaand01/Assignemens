@@ -9,7 +9,7 @@
 #include <arpa/inet.h>
 #include <unistd.h>
 
-#define SERVERPORT "5001"
+#define SERVERPORT "5000"
 #define MAXDATA 1000
 
 // Enable if you want debugging to be printed, see examble below.
@@ -171,7 +171,7 @@ int main(int argc, char *argv[])
       }
     }
 
-    if (buf[0] == 'E' || buf[0] == 'O')
+    if (strcmp(buf, "ERROR\n") || strcmp(buf, "OK\n"))
     {
       exit(1);
     }
