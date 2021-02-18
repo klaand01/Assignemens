@@ -8,6 +8,7 @@
 #include <unistd.h>
 #include <sys/time.h>
 #include <errno.h>
+#include <arpa/inet.h>
 
 // Included to get the support library
 #include <calcLib.h>
@@ -215,6 +216,18 @@ int main(int argc, char *argv[])
       printf("Closing down \n");
       exit(1);
     }
+
+    char myAddress[20];
+	  const char *myAdd;
+    struct sockaddr_in sockAddrss;
+    socklen_t sockAddrLen = sizeof(sockAddrss);
+    getsockname(clientSocket, (struct sockaddr*)&sockAddrss, &sockAddrLen);
+  
+    myAdd = inet_ntop(sockAddrss.sin_family, &sockAddrss.sin_addr, myAddress, sizeof(myAddress));
+
+    printf("Connected to %s:%d local %s:%d \n", ipAddr, port,
+    myAdd, ntohs(sockAddrss.sin_port));
+
 
     if (ntohl(cMessage.message) == 1)
     {

@@ -45,6 +45,11 @@ int main(int argc, char *argv[])
   #endif
 
   struct addrinfo addrs, *ptr;
+  memset(&addrs, 0, sizeof(addrs));
+  addrs.ai_family = AF_INET;
+  addrs.ai_socktype = SOCK_STREAM;
+  addrs.ai_protocol = IPPROTO_TCP;
+
   int clientSocket;
   int returnValue;
   int numbrBytes;
@@ -54,15 +59,10 @@ int main(int argc, char *argv[])
   int iNumb1, iNumb2, iRes;
   float fNumb1, fNumb2, fRes;
 
-  memset(&addrs, 0, sizeof(addrs));
-  addrs.ai_family = AF_INET;
-  addrs.ai_socktype = SOCK_STREAM;
-  addrs.ai_protocol = IPPROTO_TCP;
-
   returnValue = getaddrinfo(argv[1], SERVERPORT, &addrs, &ptr);
   if (returnValue != 0)
   {
-    perror("Wrong getaddrinfo \n");
+    perror("Wrong with getaddrinfo \n");
   }
 
   clientSocket = socket(ptr->ai_family, ptr->ai_socktype, ptr->ai_protocol);
@@ -77,6 +77,17 @@ int main(int argc, char *argv[])
     close(clientSocket);
     perror("Server not connected \n");
   }
+
+  char myAddress[20];
+	const char *myAdd;
+  struct sockaddr_in sockAddrss;
+  socklen_t sockAddrLen = sizeof(sockAddrss);
+  getsockname(clientSocket, (struct sockaddr*)&sockAddrss, &sockAddrLen);
+  
+  myAdd = inet_ntop(sockAddrss.sin_family, &sockAddrss.sin_addr, myAddress, sizeof(myAddress));
+
+  printf("Connected to %s:%d local %s:%d \n", Desthost, port,
+  myAdd, ntohs(sockAddrss.sin_port));
 
   while (1)
   {
@@ -171,7 +182,7 @@ int main(int argc, char *argv[])
       }
     }
 
-    if (strcmp(buf, "ERROR\n") || strcmp(buf, "OK\n"))
+    if (buf[0] == 'O' || buf[0] == 'E')
     {
       exit(1);
     }

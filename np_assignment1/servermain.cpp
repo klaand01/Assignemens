@@ -84,7 +84,7 @@ int main(int argc, char *argv[])
   struct sockaddr_in theirAddrs;
   socklen_t theirSize = sizeof(theirAddrs);
 
-  int clientSocket;
+  int clientSocket, bytes;
   char buf[MAXDATA];
 
   while (1)
@@ -102,30 +102,26 @@ int main(int argc, char *argv[])
     while (1)
     {
       memset(&buf, 0, MAXDATA);
-      
+
+      bytes = send(clientSocket, " TCP 1.0\n\n", sizeof("TEXT TCP 1.0\n\n"), 0);
+      if (bytes == -1)
+      {
+        perror("Message not sent \n");
+      }
+
+      bytes = recv(clientSocket, &buf, sizeof(buf), 0);
+      if (bytes == -1)
+      {
+        perror("Message not recevied \n");
+      }
+      else
+      {
+        printf("Sent from client: '%s' \n", buf);
+      }
+
+
     }
-
-
-
-
-
-
-
-
   }
-
-    
-
-
-
-
-
-
-
-
-
-
-
 
   close(serverSocket);
 }
