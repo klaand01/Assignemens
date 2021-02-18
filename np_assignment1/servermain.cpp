@@ -8,6 +8,8 @@
 #include <unistd.h>
 #include <arpa/inet.h>
 
+#define MAXDATA 10000
+
 // Included to get the support library
 #include <calcLib.h>
 
@@ -42,18 +44,20 @@ int main(int argc, char *argv[])
 
   int serverSocket, returnValue;
   int current = 1;
+  int queue = 5;
 
   serverSocket = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
   if (serverSocket == -1)
   {
     perror("Socket not created \n");
+    exit(1);
   }
 
   struct sockaddr_in myAddr;
   memset(&myAddr, 0, sizeof(myAddr));
   myAddr.sin_family = AF_INET;
   myAddr.sin_port = htons(port);
-  inet_aton("0.0.0.0", &myAddr.sin_addr.s_addr);
+  inet_aton("0.0.0.0", (struct in_addr*)&myAddr.sin_addr.s_addr);
 
   returnValue = setsockopt(serverSocket, SOL_SOCKET, SO_REUSEADDR, &current, sizeof(int));
   if (returnValue == -1)
@@ -62,7 +66,54 @@ int main(int argc, char *argv[])
     exit(1);
   }
   
-  int returnValue = bind(serverSocket, &myAddr, sizeof(myAddr));
+  returnValue = bind(serverSocket, (struct sockaddr*)&myAddr, sizeof(myAddr));
+  if (returnValue == -1)
+  {
+    perror("Bind not gone through \n");
+    exit(1);
+  }
+
+  returnValue = listen(serverSocket, queue);
+  if (returnValue == -1)
+  {
+    perror("Nothing to connect to \n");
+    exit(1);
+  }
+
+
+  struct sockaddr_in theirAddrs;
+  socklen_t theirSize = sizeof(theirAddrs);
+
+  int clientSocket;
+  char buf[MAXDATA];
+
+  while (1)
+  {
+    clientSocket = accept(serverSocket, (struct sockaddr *)&theirAddrs, &theirSize);
+    if (clientSocket == -1)
+    {
+      perror("Client socket not accepted \n");
+    }
+    else
+    {
+      printf("Client connected \n");
+    }
+
+    while (1)
+    {
+      memset(&buf, 0, MAXDATA);
+      
+    }
+
+
+
+
+
+
+
+
+  }
+
     
 
 
@@ -76,5 +127,5 @@ int main(int argc, char *argv[])
 
 
 
-  close(clientSocket);
+  close(serverSocket);
 }
