@@ -108,11 +108,6 @@ int main(int argc, char *argv[])
         perror("'OK' not gone through \n");
       }
     }
-    else if (strcmp(buf, "TEXT TCP 2.0\n\n") == 0)
-    {
-      printf("Does not accept \n");
-      exit(1);
-    }
 
     if (buf[0] == 'f')
     {
