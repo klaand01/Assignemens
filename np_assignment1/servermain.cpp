@@ -73,13 +73,15 @@ int main(int argc, char *argv[])
     exit(1);
   }
 
+  char *oper = randomType();
+  printf("Operator: %s \n", oper);
+
   returnValue = listen(serverSocket, queue);
   if (returnValue == -1)
   {
     perror("Nothing to connect to \n");
     exit(1);
   }
-
 
   struct sockaddr_in theirAddrs;
   socklen_t theirSize = sizeof(theirAddrs);
@@ -103,7 +105,7 @@ int main(int argc, char *argv[])
     {
       memset(&buf, 0, MAXDATA);
 
-      bytes = send(clientSocket, " TCP 1.0\n\n", sizeof("TEXT TCP 1.0\n\n"), 0);
+      bytes = send(clientSocket, "TEXT TCP 1.0\n\n", sizeof("TEXT TCP 1.0\n\n"), 0);
       if (bytes == -1)
       {
         perror("Message not sent \n");
@@ -119,7 +121,7 @@ int main(int argc, char *argv[])
         printf("Sent from client: '%s' \n", buf);
       }
 
-
+      
     }
   }
 
