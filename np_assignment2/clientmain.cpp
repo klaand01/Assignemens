@@ -13,8 +13,6 @@
 // Included to get the support library
 #include <calcLib.h>
 
-#define SERVERPORT "5000"
-
 #include "protocol.h"
 
 int main(int argc, char *argv[])
@@ -46,16 +44,18 @@ int main(int argc, char *argv[])
   addrs.ai_socktype = SOCK_DGRAM;
   addrs.ai_protocol = IPPROTO_UDP;
 
-  returnValue = getaddrinfo(argv[1], SERVERPORT, &addrs, &ptr);
-  if (returnValue == -1)
+  returnValue = getaddrinfo(argv[1], Destport, &addrs, &ptr);
+  if (returnValue != 0)
   {
     perror("Wrong with getaddrinfo \n");
+    exit(1);
   }
 
   clientSocket = socket(ptr->ai_family, ptr->ai_socktype, ptr->ai_protocol);
   if (clientSocket == -1)
   {
     perror("Failed to create socket \n");
+    exit(1);
   }
   else
   {
@@ -69,6 +69,7 @@ int main(int argc, char *argv[])
   if (returnValue == -1)
   {
     perror("Wrong with SO_RCVTIMEO \n");
+    exit(1);
   }
 
   struct calcProtocol cProtocol;
@@ -215,15 +216,15 @@ int main(int argc, char *argv[])
       printf("Message received \n");
     }
   }
+  if (timeCounter == 3)
+  {
+    printf("Closing down \n");
+    exit(1);
+  }
 
   if (ntohl(cMessage.message) == 2)
   {
     printf("NOT OK \n");
-    exit(1);
-  }
-  if (timeCounter == 3)
-  {
-    printf("Closing down \n");
     exit(1);
   }
 
