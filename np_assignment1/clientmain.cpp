@@ -9,7 +9,6 @@
 #include <arpa/inet.h>
 #include <unistd.h>
 
-#define SERVERPORT "5000"
 #define MAXDATA 1000
 
 // Enable if you want debugging to be printed, see examble below.
@@ -46,7 +45,7 @@ int main(int argc, char *argv[])
 
   struct addrinfo addrs, *ptr;
   memset(&addrs, 0, sizeof(addrs));
-  addrs.ai_family = AF_INET;
+  addrs.ai_family = AF_UNSPEC;
   addrs.ai_socktype = SOCK_STREAM;
   addrs.ai_protocol = IPPROTO_TCP;
 
@@ -59,23 +58,25 @@ int main(int argc, char *argv[])
   int iNumb1, iNumb2, iRes;
   float fNumb1, fNumb2, fRes;
 
-  returnValue = getaddrinfo(argv[1], SERVERPORT, &addrs, &ptr);
+  returnValue = getaddrinfo(argv[1], Destport, &addrs, &ptr);
   if (returnValue != 0)
   {
     perror("Wrong with getaddrinfo \n");
+    exit(1);
   }
 
   clientSocket = socket(ptr->ai_family, ptr->ai_socktype, ptr->ai_protocol);
   if (clientSocket == -1)
   {
     perror("Socket not created \n");
+    exit(1);
   }
 
   returnValue = connect(clientSocket, ptr->ai_addr, ptr->ai_addrlen);
   if (returnValue == -1)
   {
-    close(clientSocket);
     perror("Server not connected \n");
+    exit(1);
   }
 
   char myAddress[20];

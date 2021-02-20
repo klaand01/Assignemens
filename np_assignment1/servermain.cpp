@@ -73,9 +73,6 @@ int main(int argc, char *argv[])
     exit(1);
   }
 
-  char *oper = randomType();
-  printf("Operator: %s \n", oper);
-
   returnValue = listen(serverSocket, queue);
   if (returnValue == -1)
   {
