@@ -34,9 +34,6 @@ void checkJobbList(int signum){
 }
 
 
-
-
-
 int main(int argc, char *argv[]){
   
   /* Do more magic */

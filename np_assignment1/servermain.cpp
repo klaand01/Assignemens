@@ -46,6 +46,10 @@ int main(int argc, char *argv[])
   int current = 1;
   int queue = 5;
 
+  char result[20];
+  int iNumb1, iNumb2, iRes;
+  double dNumb1, dNumb2, dRes;
+
   serverSocket = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
   if (serverSocket == -1)
   {
@@ -86,6 +90,8 @@ int main(int argc, char *argv[])
   int clientSocket, bytes;
   char buf[MAXDATA];
 
+
+  //Hitta bättre sätt än en WHile-loop
   while (1)
   {
     clientSocket = accept(serverSocket, (struct sockaddr *)&theirAddrs, &theirSize);
@@ -98,11 +104,24 @@ int main(int argc, char *argv[])
       printf("Client connected \n");
     }
 
+    char *oper = randomType();
+    if (oper[0] == 'f')
+    {
+      dNumb1 = randomFloat();
+      dNumb2 = randomFloat();
+    }
+    else
+    {
+      iNumb1 = randomInt();
+      iNumb2 = randomInt();
+    }
+    
     while (1)
     {
       memset(&buf, 0, MAXDATA);
 
       bytes = send(clientSocket, "TEXT TCP 1.0\n\n", sizeof("TEXT TCP 1.0\n\n"), 0);
+      printf("Sent TEXT TCP 1.0 \n");
       if (bytes == -1)
       {
         perror("Message not sent \n");
@@ -115,10 +134,48 @@ int main(int argc, char *argv[])
       }
       else
       {
-        printf("Sent from client: '%s' \n", buf);
+        printf("Recieved from client: '%s' \n", buf);
       }
 
-      
+      if (strcmp(buf, "OK\n") != 0)
+      {
+        perror("Closing down \n");
+        exit(1);
+      }
+
+      //Räkneoperationer
+      memset(&buf, 0, MAXDATA);
+
+      if (oper[0] == 'f')
+      {
+        sprintf(buf, "%s %8.8g %8.8g\n", oper, dNumb1, dNumb2);
+      }
+      else
+      {
+        sprintf(buf, "%s %d %d\n", oper, iNumb1, iNumb2);
+      }
+
+      bytes = send(clientSocket, buf, sizeof(buf), 0);
+      if (bytes == -1)
+      {
+        perror("Assignment not sent \n");
+        exit(1);
+      }
+      else
+      {
+        printf("Assignment sent \n");
+      }
+
+      bytes = recv(clientSocket, &buf, sizeof(buf), 0);
+      if (bytes == -1)
+      {
+        perror("Message not recevied \n");
+      }
+      else
+      {
+        printf("Recieved from client: '%s' \n", buf);
+      }
+
     }
   }
 
