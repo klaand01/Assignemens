@@ -7,6 +7,7 @@
 #include <netinet/in.h>
 #include <unistd.h>
 #include <arpa/inet.h>
+#include <errno.h>
 
 #define MAXDATA 10000
 
@@ -24,7 +25,7 @@ int main(int argc, char *argv[])
     Read first input, assumes <ip>:<port> syntax, convert into one string (Desthost) and one integer (port). 
      Atm, works only on dotted notation, i.e. IPv4 and DNS. IPv6 does not work if its using ':'. 
   */
- 
+
   if (argc != 2)
   {
     printf("Usage: %s hostname:port (%d)\n", argv[0], argc);
@@ -46,9 +47,8 @@ int main(int argc, char *argv[])
   int current = 1;
   int queue = 5;
 
-  char result[20];
-  int iNumb1, iNumb2, iRes;
-  double dNumb1, dNumb2, dRes;
+  int iNumb1, iNumb2, iRes, iAnswer, iDiff;
+  double dNumb1, dNumb2, dRes, dAnswer, dDiff;
 
   serverSocket = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
   if (serverSocket == -1)
@@ -67,6 +67,16 @@ int main(int argc, char *argv[])
   if (returnValue == -1)
   {
     perror("Setsocketopt");
+    exit(1);
+  }
+
+  struct timeval time;
+  time.tv_sec = 5;
+
+  returnValue = setsockopt(serverSocket, SOL_SOCKET, SO_RCVTIMEO, &time, sizeof(time));
+  if (returnValue == -1)
+  {
+    perror("Wrong with SO_RCVTIMEO \n");
     exit(1);
   }
   
@@ -90,8 +100,6 @@ int main(int argc, char *argv[])
   int clientSocket, bytes;
   char buf[MAXDATA];
 
-
-  //Hitta bättre sätt än en WHile-loop
   while (1)
   {
     clientSocket = accept(serverSocket, (struct sockaddr *)&theirAddrs, &theirSize);
@@ -102,22 +110,61 @@ int main(int argc, char *argv[])
     else
     {
       printf("Client connected \n");
-    }
 
-    char *oper = randomType();
-    if (oper[0] == 'f')
-    {
-      dNumb1 = randomFloat();
-      dNumb2 = randomFloat();
-    }
-    else
-    {
-      iNumb1 = randomInt();
-      iNumb2 = randomInt();
-    }
-    
-    while (1)
-    {
+      char *oper = randomType();
+      if (oper[0] == 'f')
+      {
+        dNumb1 = randomFloat();
+        dNumb2 = randomFloat();
+
+        if (strcmp(oper, "fadd") == 0)
+        {
+          dRes = dNumb1 + dNumb2;
+        }
+
+        if (strcmp(oper, "fdiv") == 0)
+        {
+          dRes = dNumb1 / dNumb2;
+        }
+
+        if (strcmp(oper, "fmul") == 0)
+        {
+          dRes = dNumb1 * dNumb2;
+        }
+
+        if (strcmp(oper, "fsub") == 0)
+        {
+          dRes = dNumb1 - dNumb2;
+        }
+
+
+      }
+      else
+      {
+        iNumb1 = randomInt();
+        iNumb2 = randomInt();
+
+        if (strcmp(oper, "add") == 0)
+        {
+          iRes = iNumb1 + iNumb2;
+        }
+
+        if (strcmp(oper, "div") == 0)
+        {
+          iRes = iNumb1 / iNumb2;
+        }
+
+        if (strcmp(oper, "mul") == 0)
+        {
+          iRes = iNumb1 * iNumb2;
+        }
+
+        if (strcmp(oper, "sub") == 0)
+        {
+          iRes = iNumb1 - iNumb2;
+        }
+      }
+
       memset(&buf, 0, MAXDATA);
 
       bytes = send(clientSocket, "TEXT TCP 1.0\n\n", sizeof("TEXT TCP 1.0\n\n"), 0);
@@ -130,7 +177,12 @@ int main(int argc, char *argv[])
       bytes = recv(clientSocket, &buf, sizeof(buf), 0);
       if (bytes == -1)
       {
-        perror("Message not recevied \n");
+        if (errno == EAGAIN)
+        {
+          printf("Message not recevied on time \n");
+          bytes = send(clientSocket, "ERROR TO\n", sizeof("ERROR TO\n"), 0);
+          exit(1);
+        }
       }
       else
       {
@@ -159,7 +211,6 @@ int main(int argc, char *argv[])
       if (bytes == -1)
       {
         perror("Assignment not sent \n");
-        exit(1);
       }
       else
       {
@@ -169,13 +220,56 @@ int main(int argc, char *argv[])
       bytes = recv(clientSocket, &buf, sizeof(buf), 0);
       if (bytes == -1)
       {
-        perror("Message not recevied \n");
+        if (errno == EAGAIN)
+        {
+          printf("Message not recevied on time \n");
+          bytes = send(clientSocket, "ERROR TO\n", sizeof("ERROR TO\n"), 0);
+          exit(1);
+        }
       }
       else
       {
         printf("Recieved from client: '%s' \n", buf);
       }
 
+      if (oper[0] == 'f')
+      {
+        dAnswer = atoi(buf);
+        dDiff = abs(dRes - dAnswer);
+
+        if (dDiff < 0.0001)
+        {
+          bytes = send(clientSocket, "OK\n", sizeof("OK\n"), 0);
+          if (bytes == -1)
+          {
+            perror("Correction not sent \n");
+          }
+          else
+          {
+            printf("Assignment sent \n");
+            exit(1);
+          }
+        }
+      }
+      else
+      {
+        iAnswer = atoi(buf);
+        iDiff = abs(iRes - iAnswer);
+
+        if (iDiff < 0.0001)
+        {
+          bytes = send(clientSocket, "OK\n", sizeof("OK\n"), 0);
+          if (bytes == -1)
+          {
+            perror("Correction not sent \n");
+          }
+          else
+          {
+            printf("Correction sent \n");
+            exit(1);
+          }
+        }
+      }
     }
   }
 
