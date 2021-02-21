@@ -63,7 +63,7 @@ int main(int argc, char *argv[])
   myAddr.sin_port = htons(port);
   inet_aton("0.0.0.0", (struct in_addr*)&myAddr.sin_addr.s_addr);
 
-  returnValue = setsockopt(serverSocket, SOL_SOCKET, SO_REUSEADDR, &current, sizeof(int));
+  returnValue = setsockopt(serverSocket, SOL_SOCKET, SO_REUSEADDR, &current, sizeof(current));
   if (returnValue == -1)
   {
     perror("Setsocketopt");

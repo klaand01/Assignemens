@@ -11,6 +11,7 @@
 #include <netinet/in.h>
 #include <unistd.h>
 #include <arpa/inet.h>
+#include <netdb.h>
 
 
 // Included to get the support library
@@ -56,21 +57,37 @@ int main(int argc, char *argv[])
   int port=atoi(Destport);
   printf("Host %s, and port %d. \n", Desthost, port);
 
-  int serverSocket, returnValue;
-  struct sockaddr_in myAddr;
-  memset(&myAddr, 0, sizeof(myAddr));
-  myAddr.sin_family = AF_UNSPEC;
-  myAddr.sin_port = htons(port);
-  inet_aton("0.0.0.0", (struct in_addr*)&myAddr.sin_addr.s_addr);
+  int serverSocket, returnValue, sentBytes;
+  int current = 1;
+
+  struct addrinfo addrs, *ptr;
+  memset(&addrs, 0, sizeof(addrs));
+  addrs.ai_family = AF_UNSPEC;
+  addrs.ai_socktype = SOCK_DGRAM;
+  addrs.ai_protocol = IPPROTO_UDP;
+
+  returnValue = getaddrinfo(argv[1], Destport, &addrs, &ptr);
+  if (returnValue != 0)
+  {
+    perror("Wrong with getaddrinfo \n");
+    exit(1);
+  }
   
-  serverSocket = socket(AF_UNSPEC, SOCK_DGRAM, IPPROTO_UDP);
+  serverSocket = socket(ptr->ai_family, ptr->ai_socktype, ptr->ai_protocol);
   if (serverSocket == -1)
   {
     perror("Socket failed to create \n");
     exit(1);
   }
 
-  returnValue = bind(serverSocket, (struct sockaddr*)&myAddr, sizeof(myAddr));
+  returnValue = setsockopt(serverSocket, SOL_SOCKET, SO_REUSEADDR, &current, sizeof(current));
+  if (returnValue == -1)
+  {
+    perror("Setsocketopt");
+    exit(1);
+  }
+
+  returnValue = bind(serverSocket, ptr->ai_addr, ptr->ai_addrlen);
   if (returnValue == -1)
   {
     perror("Could not bind \n");
@@ -90,12 +107,39 @@ int main(int argc, char *argv[])
   signal(SIGALRM, checkJobbList);
   setitimer(ITIMER_REAL,&alarmTime,NULL); // Start/register the alarm. 
 
-  
+  struct calcMessage cMessage;
+  struct calcProtocol cProtocol;
+
   while(terminate==0)
   {
     printf("This is the main loop, %d time.\n",loopCount);
 
+    sentBytes = recvfrom(serverSocket, &cMessage, sizeof(cMessage), 0, ptr->ai_addr, &ptr->ai_addrlen);
+    if (sentBytes == -1)
+    {
+      perror("Message not received \n");
+    }
+    else
+    {
+      printf("CalcMessage received \n");
+    }
+
+    cMessage.type = ntohs(cMessage.type);
+    cMessage.message = ntohl(cMessage.message);
+    cMessage.protocol = ntohs(cMessage.protocol);
+    cMessage.major_version = ntohs(cMessage.major_version);
+
+    if (cMessage.type != 22 || cMessage.message != 0 || 
+    cMessage.protocol != 17 || cMessage.major_version != 1)
+    {
+      cMessage.message = htons(2);
+      sentBytes = sendto(serverSocket, &cMessage, sizeof(cMessage), 0, ptr->ai_addr, ptr->ai_addrlen);
+      printf("Wrong message received \n");
+      exit(1);
+    }
+
     
+
 
     sleep(1);
     loopCount++;

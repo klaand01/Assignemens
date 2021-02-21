@@ -33,12 +33,12 @@ int main(int argc, char *argv[])
   int port=atoi(Destport);
   printf("Host %s, and port %d.\n", Desthost,port);
 
-  struct addrinfo addrs, *ptr;
   int clientSocket, returnValue, sentBytes;
   int timeCounter = 0;
   int operNumbr, iNumb1, iNumb2, iRes;
   double dNumb1, dNumb2, dRes;
 
+  struct addrinfo addrs, *ptr;
   memset(&addrs, 0, sizeof(addrs));
   addrs.ai_family = AF_UNSPEC;
   addrs.ai_socktype = SOCK_DGRAM;
