@@ -60,6 +60,9 @@ int main(int argc, char *argv[])
   int serverSocket, returnValue, sentBytes;
   int current = 1;
 
+  int iNumb1, iNumb2, iRes, iDiff;
+  double dNumb1, dNumb2, dRes, dDiff;
+
   struct addrinfo addrs, *ptr;
   memset(&addrs, 0, sizeof(addrs));
   addrs.ai_family = AF_UNSPEC;
@@ -118,6 +121,7 @@ int main(int argc, char *argv[])
     if (sentBytes == -1)
     {
       perror("Message not received \n");
+      exit(1);
     }
     else
     {
@@ -137,9 +141,96 @@ int main(int argc, char *argv[])
       printf("Wrong message received \n");
       exit(1);
     }
-
     
+    char *oper = randomType();
+    iNumb1 = randomInt();
+    iNumb2 = randomInt();
 
+    cProtocol.flValue1 = randomFloat();
+    cProtocol.flValue2 = randomFloat();
+    cProtocol.inValue1 = htonl(iNumb1);
+    cProtocol.inValue2 = htonl(iNumb2);
+
+    if (oper == "add")
+    {
+      cProtocol.arith = htonl(1);
+      iRes = iNumb1 + iNumb2;
+    }
+
+    if (oper == "sub")
+    {
+      cProtocol.arith = htonl(2);
+      iRes = iNumb1 - iNumb2;
+    }
+
+    if (oper == "mul")
+    {
+      cProtocol.arith = htonl(3);
+      iRes = iNumb1 * iNumb2;
+    }
+
+    if (oper == "div")
+    {
+      cProtocol.arith = htonl(4);
+      iRes = iNumb1 / iNumb2;
+    }
+
+    if (oper == "fadd")
+    {
+      cProtocol.arith = htonl(5);
+      dRes = dNumb1 + dNumb2;
+    }
+
+    if (oper == "fsub")
+    {
+      cProtocol.arith = htonl(6);
+      dRes = dNumb1 - dNumb2;
+    }
+
+    if (oper == "fmul")
+    {
+      cProtocol.arith = htonl(7);
+      dRes = dNumb1 * dNumb2;
+    }
+
+    if (oper == "fdiv")
+    {
+      cProtocol.arith = htonl(8);
+      dRes = dNumb1 / dNumb2;
+    }
+
+    sentBytes = sendto(serverSocket, &cProtocol, sizeof(cProtocol), 0, ptr->ai_addr, ptr->ai_addrlen);
+    if (sentBytes == -1)
+    {
+      perror("Calcprotocol not sent \n");
+      exit(1);
+    }
+
+    sentBytes = recvfrom(serverSocket, &cProtocol, sizeof(cProtocol), 0, ptr->ai_addr, &ptr->ai_addrlen);
+    if (sentBytes == -1)
+    {
+      perror("Calcprotocol not received \n");
+      exit(1);
+    }
+
+    iDiff = abs(iRes - ntohs(cProtocol.inResult));
+    dDiff = abs(dRes - cProtocol.flResult);
+
+    if (iDiff < 0.0001 || dDiff < 0.0001)
+    {
+      cMessage.message = htonl(1);
+      sentBytes = sendto(serverSocket, &cMessage, sizeof(cMessage), 0, ptr->ai_addr, ptr->ai_addrlen);
+      if (sentBytes == -1)
+      {
+        perror("Answer not sent \n");
+        exit(1);
+      }
+      else
+      {
+        printf("Answer sent \n");
+        exit(1);
+      }
+    }
 
     sleep(1);
     loopCount++;

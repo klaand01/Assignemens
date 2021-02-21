@@ -111,11 +111,12 @@ int main(int argc, char *argv[])
     {
       printf("Client connected \n");
 
-      char *oper = randomType();
+      char *oper;
+      // *oper = randomType();
       if (oper[0] == 'f')
       {
-        dNumb1 = randomFloat();
-        dNumb2 = randomFloat();
+        //dNumb1 = randomFloat();
+        //dNumb2 = randomFloat();
 
         if (strcmp(oper, "fadd") == 0)
         {
@@ -139,8 +140,8 @@ int main(int argc, char *argv[])
       }
       else
       {
-        iNumb1 = randomInt();
-        iNumb2 = randomInt();
+        //iNumb1 = randomInt();
+        //iNumb2 = randomInt();
 
         if (strcmp(oper, "add") == 0)
         {
