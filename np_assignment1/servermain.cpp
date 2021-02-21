@@ -136,8 +136,6 @@ int main(int argc, char *argv[])
         {
           dRes = dNumb1 - dNumb2;
         }
-
-
       }
       else
       {
