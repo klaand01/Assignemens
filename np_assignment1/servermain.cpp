@@ -50,7 +50,7 @@ int main(int argc, char *argv[])
   int iNumb1, iNumb2, iRes, iAnswer, iDiff;
   double dNumb1, dNumb2, dRes, dAnswer, dDiff;
 
-  serverSocket = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
+  serverSocket = socket(AF_UNSPEC, SOCK_STREAM, IPPROTO_TCP);
   if (serverSocket == -1)
   {
     perror("Socket not created \n");
@@ -59,7 +59,7 @@ int main(int argc, char *argv[])
 
   struct sockaddr_in myAddr;
   memset(&myAddr, 0, sizeof(myAddr));
-  myAddr.sin_family = AF_INET;
+  myAddr.sin_family = AF_UNSPEC;
   myAddr.sin_port = htons(port);
   inet_aton("0.0.0.0", (struct in_addr*)&myAddr.sin_addr.s_addr);
 
