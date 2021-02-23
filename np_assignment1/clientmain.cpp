@@ -75,7 +75,7 @@ int main(int argc, char *argv[])
   returnValue = connect(clientSocket, ptr->ai_addr, ptr->ai_addrlen);
   if (returnValue == -1)
   {
-    perror("Server not connected \n");
+    perror("Client not connected \n");
     exit(1);
   }
 

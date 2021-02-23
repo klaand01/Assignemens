@@ -8,6 +8,7 @@
 #include <unistd.h>
 #include <arpa/inet.h>
 #include <errno.h>
+#include <netdb.h>
 
 #define MAXDATA 10000
 
@@ -50,42 +51,63 @@ int main(int argc, char *argv[])
   int iNumb1, iNumb2, iRes, iAnswer, iDiff;
   double dNumb1, dNumb2, dRes, dAnswer, dDiff;
 
-  serverSocket = socket(AF_UNSPEC, SOCK_STREAM, IPPROTO_TCP);
-  if (serverSocket == -1)
+  struct addrinfo addrs, *ptr, *servinfo;
+  memset(&addrs, 0, sizeof(addrs));
+  addrs.ai_family = AF_UNSPEC;
+  addrs.ai_socktype = SOCK_STREAM;
+  addrs.ai_protocol = IPPROTO_TCP;
+  addrs.ai_flags = AI_PASSIVE;
+
+  returnValue = getaddrinfo(Desthost, Destport, &addrs, &servinfo);
+  if (returnValue != 0)
   {
-    perror("Socket not created \n");
+    perror("Wrong with getaddrinfo \n");
     exit(1);
   }
 
-  struct sockaddr_in myAddr;
-  memset(&myAddr, 0, sizeof(myAddr));
-  myAddr.sin_family = AF_UNSPEC;
-  myAddr.sin_port = htons(port);
-  inet_aton("0.0.0.0", (struct in_addr*)&myAddr.sin_addr.s_addr);
-
-  returnValue = setsockopt(serverSocket, SOL_SOCKET, SO_REUSEADDR, &current, sizeof(current));
-  if (returnValue == -1)
+  for (ptr = servinfo; ptr != NULL; ptr = ptr->ai_next)
   {
-    perror("Setsocketopt");
-    exit(1);
-  }
+    serverSocket = socket(ptr->ai_family, ptr->ai_socktype, ptr->ai_protocol);
+    if (serverSocket == -1)
+    {
+      perror("Socket not created \n");
+      exit(1);
+    }
+    
+    returnValue = setsockopt(serverSocket, SOL_SOCKET, SO_REUSEADDR, &current, sizeof(current));
+    if (returnValue == -1)
+    {
+      perror("Setsocketopt");
+      exit(1);
+    }
 
-  struct timeval time;
-  time.tv_sec = 5;
+    struct timeval time;
+    time.tv_sec = 5;
+    time.tv_usec = 0;
 
-  returnValue = setsockopt(serverSocket, SOL_SOCKET, SO_RCVTIMEO, &time, sizeof(time));
-  if (returnValue == -1)
-  {
-    perror("Wrong with SO_RCVTIMEO \n");
-    exit(1);
+    returnValue = setsockopt(serverSocket, SOL_SOCKET, SO_RCVTIMEO, &time, sizeof(time));
+    if (returnValue == -1)
+    {
+      perror("Wrong with SO_RCVTIMEO \n");
+      exit(1);
+    }
+    
+    returnValue = bind(serverSocket, ptr->ai_addr, ptr->ai_addrlen);
+    if (returnValue == -1)
+    {
+      perror("Bind not gone through \n");
+      exit(1);
+    }
+
+    break;
   }
   
-  returnValue = bind(serverSocket, (struct sockaddr*)&myAddr, sizeof(myAddr));
-  if (returnValue == -1)
+	freeaddrinfo(servinfo);
+  if (ptr == NULL)  
   {
-    perror("Bind not gone through \n");
-    exit(1);
-  }
+		perror("Server: failed to bind \n");
+		exit(1);
+	}
 
   returnValue = listen(serverSocket, queue);
   if (returnValue == -1)
@@ -94,7 +116,7 @@ int main(int argc, char *argv[])
     exit(1);
   }
 
-  struct sockaddr_in theirAddrs;
+  struct sockaddr theirAddrs;
   socklen_t theirSize = sizeof(theirAddrs);
 
   int clientSocket, bytes;
@@ -102,21 +124,22 @@ int main(int argc, char *argv[])
 
   while (1)
   {
-    clientSocket = accept(serverSocket, (struct sockaddr *)&theirAddrs, &theirSize);
+    clientSocket = accept(serverSocket, &theirAddrs, &theirSize);
     if (clientSocket == -1)
     {
       perror("Client socket not accepted \n");
+      exit(1);
     }
     else
     {
       printf("Client connected \n");
 
-      char *oper;
-      // *oper = randomType();
+      char *oper = randomType();
+
       if (oper[0] == 'f')
       {
-        //dNumb1 = randomFloat();
-        //dNumb2 = randomFloat();
+        dNumb1 = randomFloat();
+        dNumb2 = randomFloat();
 
         if (strcmp(oper, "fadd") == 0)
         {
@@ -140,8 +163,8 @@ int main(int argc, char *argv[])
       }
       else
       {
-        //iNumb1 = randomInt();
-        //iNumb2 = randomInt();
+        iNumb1 = randomInt();
+        iNumb2 = randomInt();
 
         if (strcmp(oper, "add") == 0)
         {
@@ -234,7 +257,7 @@ int main(int argc, char *argv[])
       if (oper[0] == 'f')
       {
         dAnswer = atoi(buf);
-        dDiff = abs(dRes - dAnswer);
+        dDiff = dRes - dAnswer;
 
         if (dDiff < 0.0001)
         {
@@ -245,7 +268,7 @@ int main(int argc, char *argv[])
           }
           else
           {
-            printf("Assignment sent \n");
+            printf("Correction sent \n");
             exit(1);
           }
         }
@@ -253,7 +276,7 @@ int main(int argc, char *argv[])
       else
       {
         iAnswer = atoi(buf);
-        iDiff = abs(iRes - iAnswer);
+        iDiff = iRes - iAnswer;
 
         if (iDiff < 0.0001)
         {
