@@ -25,11 +25,22 @@ using namespace std;
 int loopCount=0;
 int terminate=0;
 
+struct checkClient
+{
+  char *ipAddress;
+  int port;
+  uint32_t clientID;
+};
+struct checkClient client;
+
 
 /* Call back function, will be called when the SIGALRM is raised when the timer expires. */
 void checkJobbList(int signum)
 {
   // As anybody can call the handler, its good coding to check the signal number that called it.
+  client.ipAddress = NULL;
+  client.port = 0;
+  client.clientID = 0;
 
   printf("Let me be, I want to sleep.\n");
 
@@ -58,7 +69,6 @@ int main(int argc, char *argv[])
   printf("Host %s, and port %d. \n", Desthost, port);
 
   int serverSocket, returnValue, sentBytes;
-  uint32_t clientID;
   int current = 1;
 
   int iNumb1, iNumb2, iRes, iDiff;
@@ -117,23 +127,22 @@ int main(int argc, char *argv[])
   while(terminate==0)
   {
     printf("This is the main loop, %d time.\n",loopCount);
-    clientID = ntohl(cProtocol.id);
-
+    
     sentBytes = recvfrom(serverSocket, &cMessage, sizeof(cMessage), 0, ptr->ai_addr, &ptr->ai_addrlen);
     if (sentBytes == -1)
     {
       perror("Message not received \n");
       exit(1);
     }
-    else if (clientID != ntohl(cProtocol.id))
-    {
-      printf("Different ID than expected \n");
-      exit(1);
-    }
     else
     {
       printf("CalcMessage received \n");
     }
+
+    in_addr ipAddrs = ((sockaddr_in*)ptr)->sin_addr;
+    client.ipAddress = inet_ntoa(ipAddrs);
+    client.port = port;
+    client.clientID = ntohl(cProtocol.id);
 
     cMessage.type = ntohs(cMessage.type);
     cMessage.message = ntohl(cMessage.message);
@@ -222,10 +231,12 @@ int main(int argc, char *argv[])
       perror("Calcprotocol not received \n");
       exit(1);
     }
-    else if (clientID != ntohl(cProtocol.id))
+    else if (client.ipAddress != inet_ntoa(ipAddrs) || client.port != port 
+    || client.clientID != ntohl(cProtocol.id))
     {
-      printf("Different ID than expected \n");
-      exit(1);
+      printf("Client is dead to me now \n");
+      cMessage.message = ntohl(2);
+      sentBytes = sendto(serverSocket, &cMessage, sizeof(cMessage), 0, ptr->ai_addr, ptr->ai_addrlen);
     }
     
 
