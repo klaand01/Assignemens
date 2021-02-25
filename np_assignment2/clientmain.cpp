@@ -222,12 +222,6 @@ int main(int argc, char *argv[])
     exit(1);
   }
 
-  if (ntohl(cMessage.message) == 2)
-  {
-    printf("NOT OK \n");
-    exit(1);
-  }
-
   char myAddress[20];
 	const char *myAdd;
   struct sockaddr_in sockAddrss;
@@ -242,6 +236,12 @@ int main(int argc, char *argv[])
   if (ntohl(cMessage.message) == 1)
   {
     printf("OK \n");
+    exit(1);
+  }
+
+  if (ntohl(cMessage.message) == 2)
+  {
+    printf("NOT OK \n");
     exit(1);
   }
   

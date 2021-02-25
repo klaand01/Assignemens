@@ -92,6 +92,7 @@ int main(int argc, char *argv[])
 
   while (1)
   {
+    memset(&buf, 0, sizeof(buf));
     numbrBytes = recv(clientSocket, buf, MAXDATA, 0);
     if (numbrBytes == -1)
     {
@@ -178,7 +179,7 @@ int main(int argc, char *argv[])
       }
     }
 
-    if (buf[0] == 'O' || buf[0] == 'E')
+    if (strcmp(buf, "OK\n") == 0 || strcmp(buf, "ERROR\n") == 0)
     {
       exit(1);
     }

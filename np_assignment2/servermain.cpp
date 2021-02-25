@@ -119,7 +119,7 @@ int main(int argc, char *argv[])
 
   /* Regiter a callback function, associated with the SIGALRM signal, which will be raised when the alarm goes of */
   signal(SIGALRM, checkJobbList);
-  setitimer(ITIMER_REAL,&alarmTime,NULL); // Start/register the alarm. 
+  setitimer(ITIMER_REAL,&alarmTime,NULL); // Start/register the alarm.
 
   struct calcMessage cMessage;
   struct calcProtocol cProtocol;
@@ -132,7 +132,6 @@ int main(int argc, char *argv[])
     if (sentBytes == -1)
     {
       perror("Message not received \n");
-      exit(1);
     }
     else
     {
@@ -141,8 +140,10 @@ int main(int argc, char *argv[])
 
     in_addr ipAddrs = ((sockaddr_in*)ptr)->sin_addr;
     client.ipAddress = inet_ntoa(ipAddrs);
-    client.port = port;
+    client.port = ntohs(clientPort.sin_port);
     client.clientID = ntohl(cProtocol.id);
+
+    printf("Port: %d \n", client.port);
 
     cMessage.type = ntohs(cMessage.type);
     cMessage.message = ntohl(cMessage.message);
@@ -155,9 +156,9 @@ int main(int argc, char *argv[])
       cMessage.message = htons(2);
       sentBytes = sendto(serverSocket, &cMessage, sizeof(cMessage), 0, ptr->ai_addr, ptr->ai_addrlen);
       printf("Wrong message received \n");
-      exit(1);
     }
-    
+
+    initCalcLib();
     char *oper = randomType();
     iNumb1 = randomInt();
     iNumb2 = randomInt();
@@ -168,7 +169,6 @@ int main(int argc, char *argv[])
     cProtocol.inValue2 = htonl(iNumb2);
     cProtocol.flValue1 = dNumb1;
     cProtocol.flValue2 = dNumb2;
-
 
     if (strcmp(oper, "add") == 0)
     {
@@ -224,6 +224,10 @@ int main(int argc, char *argv[])
       perror("Calcprotocol not sent \n");
       exit(1);
     }
+    else
+    {
+      printf("Calcprotocol sent \n");
+    }
 
     sentBytes = recvfrom(serverSocket, &cProtocol, sizeof(cProtocol), 0, ptr->ai_addr, &ptr->ai_addrlen);
     if (sentBytes == -1)
@@ -231,12 +235,16 @@ int main(int argc, char *argv[])
       perror("Calcprotocol not received \n");
       exit(1);
     }
-    else if (client.ipAddress != inet_ntoa(ipAddrs) || client.port != port 
+    else if (client.ipAddress != inet_ntoa(ipAddrs) || client.port != clientPort 
     || client.clientID != ntohl(cProtocol.id))
     {
       printf("Client is dead to me now \n");
       cMessage.message = ntohl(2);
       sentBytes = sendto(serverSocket, &cMessage, sizeof(cMessage), 0, ptr->ai_addr, ptr->ai_addrlen);
+    }
+    else
+    {
+      printf("Calcprotocol received \n");
     }
     
 
@@ -250,12 +258,10 @@ int main(int argc, char *argv[])
       if (sentBytes == -1)
       {
         perror("Answer not sent \n");
-        exit(1);
       }
       else
       {
         printf("Answer sent \n");
-        exit(1);
       }
     }
 
