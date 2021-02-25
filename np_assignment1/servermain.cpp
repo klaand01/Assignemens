@@ -131,8 +131,8 @@ int main(int argc, char *argv[])
       if (errno == EAGAIN)
       {
         printf("Message not recevied on time \n");
-        exit(1);
       }
+      exit(1);
     }
     else
     {
