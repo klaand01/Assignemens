@@ -56,7 +56,7 @@ int main(int argc, char *argv[])
 
   char oper[5], result[20];
   int iNumb1, iNumb2, iRes;
-  float fNumb1, fNumb2, fRes;
+  double dNumb1, dNumb2, dRes;
 
   returnValue = getaddrinfo(argv[1], Destport, &addrs, &ptr);
   if (returnValue != 0)
@@ -113,29 +113,29 @@ int main(int argc, char *argv[])
 
     if (buf[0] == 'f')
     {
-      sscanf(buf, "%s %f %f", oper, &fNumb1, &fNumb2);
+      sscanf(buf, "%s %lf %lf", oper, &dNumb1, &dNumb2);
 
       if (strcmp(oper, "fadd") == 0)
       {
-        fRes = fNumb1 + fNumb2;
+        dRes = dNumb1 + dNumb2;
       }
 
       else if (strcmp(oper, "fdiv") == 0)
       {
-        fRes = fNumb1 / fNumb2;
+        dRes = dNumb1 / dNumb2;
       }
 
       else if (strcmp(oper, "fmul") == 0)
       {
-        fRes = fNumb1 * fNumb2;
+        dRes = dNumb1 * dNumb2;
       }
 
       else if (strcmp(oper, "fsub") == 0)
       {
-        fRes = fNumb1 - fNumb2;
+        dRes = dNumb1 - dNumb2;
       }
 
-      sprintf(result, "%f\n", fRes);
+      sprintf(result, "%f\n", dRes);
       numbrBytes = send(clientSocket, result, strlen(result), 0);
       printf("Sent answer %s", result);
       

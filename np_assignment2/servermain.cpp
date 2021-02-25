@@ -13,10 +13,8 @@
 #include <arpa/inet.h>
 #include <netdb.h>
 
-
 // Included to get the support library
 #include <calcLib.h>
-
 #include "protocol.h"
 
 
@@ -28,7 +26,6 @@ int terminate=0;
 struct checkClient
 {
   char *ipAddress;
-  int port;
   uint32_t clientID;
 };
 struct checkClient client;
@@ -39,7 +36,6 @@ void checkJobbList(int signum)
 {
   // As anybody can call the handler, its good coding to check the signal number that called it.
   client.ipAddress = NULL;
-  client.port = 0;
   client.clientID = 0;
 
   printf("Let me be, I want to sleep.\n");
@@ -140,10 +136,7 @@ int main(int argc, char *argv[])
 
     in_addr ipAddrs = ((sockaddr_in*)ptr)->sin_addr;
     client.ipAddress = inet_ntoa(ipAddrs);
-    client.port = ntohs(clientPort.sin_port);
     client.clientID = ntohl(cProtocol.id);
-
-    printf("Port: %d \n", client.port);
 
     cMessage.type = ntohs(cMessage.type);
     cMessage.message = ntohl(cMessage.message);
@@ -222,7 +215,6 @@ int main(int argc, char *argv[])
     if (sentBytes == -1)
     {
       perror("Calcprotocol not sent \n");
-      exit(1);
     }
     else
     {
@@ -235,8 +227,7 @@ int main(int argc, char *argv[])
       perror("Calcprotocol not received \n");
       exit(1);
     }
-    else if (client.ipAddress != inet_ntoa(ipAddrs) || client.port != clientPort 
-    || client.clientID != ntohl(cProtocol.id))
+    else if (client.ipAddress != inet_ntoa(ipAddrs) || client.clientID != ntohl(cProtocol.id))
     {
       printf("Client is dead to me now \n");
       cMessage.message = ntohl(2);
@@ -246,7 +237,6 @@ int main(int argc, char *argv[])
     {
       printf("Calcprotocol received \n");
     }
-    
 
     iDiff = iRes - ntohs(cProtocol.inResult);
     dDiff = dRes - cProtocol.flResult;
