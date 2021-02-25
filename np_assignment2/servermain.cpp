@@ -17,7 +17,6 @@
 #include <calcLib.h>
 #include "protocol.h"
 
-
 using namespace std;
 /* Needs to be global, to be rechable by callback and main */
 int loopCount=0;
@@ -236,22 +235,22 @@ int main(int argc, char *argv[])
     else
     {
       printf("Calcprotocol received \n");
-    }
 
-    iDiff = iRes - ntohs(cProtocol.inResult);
-    dDiff = dRes - cProtocol.flResult;
+      iDiff = iRes - ntohs(cProtocol.inResult);
+      dDiff = dRes - cProtocol.flResult;
 
-    if (iDiff < 0.0001 || dDiff < 0.0001)
-    {
-      cMessage.message = htonl(1);
-      sentBytes = sendto(serverSocket, &cMessage, sizeof(cMessage), 0, ptr->ai_addr, ptr->ai_addrlen);
-      if (sentBytes == -1)
+      if (iDiff < 0.0001 || dDiff < 0.0001)
       {
-        perror("Answer not sent \n");
-      }
-      else
-      {
-        printf("Answer sent \n");
+        cMessage.message = htonl(1);
+        sentBytes = sendto(serverSocket, &cMessage, sizeof(cMessage), 0, ptr->ai_addr, ptr->ai_addrlen);
+        if (sentBytes == -1)
+        {
+          perror("Answer not sent \n");
+        }
+        else
+        {
+          printf("Answer sent \n");
+        }
       }
     }
 

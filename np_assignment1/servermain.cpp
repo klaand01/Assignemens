@@ -128,6 +128,11 @@ int main(int argc, char *argv[])
     if (clientSocket == -1)
     {
       perror("Client socket not accepted \n");
+      if (errno == EAGAIN)
+      {
+        printf("Message not recevied on time \n");
+        exit(1);
+      }
     }
     else
     {
@@ -267,7 +272,6 @@ int main(int argc, char *argv[])
           else
           {
             printf("Correction sent \n");
-            exit(1);
           }
         }
       }

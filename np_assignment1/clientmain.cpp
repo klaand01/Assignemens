@@ -179,7 +179,7 @@ int main(int argc, char *argv[])
       }
     }
 
-    if (strcmp(buf, "OK\n") == 0 || strcmp(buf, "ERROR\n") == 0)
+    if (buf[0] == 'O' || buf[0] == 'E')
     {
       exit(1);
     }

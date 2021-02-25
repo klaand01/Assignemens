@@ -12,7 +12,6 @@
 
 // Included to get the support library
 #include <calcLib.h>
-
 #include "protocol.h"
 
 int main(int argc, char *argv[])
