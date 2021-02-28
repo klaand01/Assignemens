@@ -29,6 +29,7 @@ int main(int argc, char *argv[])
   int port=atoi(Destport);
   printf("Connected to %s:%s \n", Desthost, Destport);
   char *name = argv[2];
+  char *userInput;
   fd_set readFd;
 
 
@@ -150,25 +151,40 @@ int main(int argc, char *argv[])
   while (1)
   {
     FD_ZERO(&readFd);
-    //FD_SET(STDIN, &readFd);
+    FD_SET(STDIN, &readFd);
     FD_SET(clientSocket, &readFd);
+    memset(&buf, 0, sizeof(buf));
 
     numbrBytes = select(clientSocket + 1, &readFd, NULL, NULL, NULL);
     if (numbrBytes == -1)
     {
-      printf("Wrong with Select \n");
+      printf("Wrong with select \n");
       exit(1);
-    }
-
-    if (FD_ISSET(clientSocket, &readFd))
-    {
-      printf("Servern lurkar \n");
     }
 
     if (FD_ISSET(STDIN, &readFd))
     {
-      printf("Användaren lurkar \n");
+      scanf("%s", userInput);
+      sprintf(buf, "MSG %s\n", userInput);
+
+      numbrBytes = send(clientSocket, buf, sizeof(buf), 0);
+      if (numbrBytes == -1)
+      {
+        perror("Send not gone through \n");
+        exit(1);
+      }
     }
+
+    if (FD_ISSET(clientSocket, &readFd))
+    {
+      numbrBytes = recv(clientSocket, &buf, MAXDATA, 0);
+      if (numbrBytes == -1)
+      {
+        perror("Wrong with message \n");
+        exit(1);
+      }
+      printf("Server: %s \n", buf);
+    }    
   }
 
   //close(clientSocket);
