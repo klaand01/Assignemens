@@ -6,8 +6,11 @@
 #include <netdb.h>
 #include <string.h>
 #include <regex.h>
+#include <unistd.h>
+#include <sys/time.h>
 
 #define MAXDATA 255
+#define STDIN 0
 
 int main(int argc, char *argv[])
 {
@@ -26,12 +29,15 @@ int main(int argc, char *argv[])
   int port=atoi(Destport);
   printf("Connected to %s:%s \n", Desthost, Destport);
   char *name = argv[2];
+  fd_set readFd;
 
+
+  //Testart nickname
   char *expression = "^[A-Za-z_]+$";
-  regex_t regularexpression;
+  regex_t regex;
   int reti;
   
-  reti = regcomp(&regularexpression, expression, REG_EXTENDED);
+  reti = regcomp(&regex, expression, REG_EXTENDED);
   if (reti)
   {
     perror("Could not compile regex.\n");
@@ -40,12 +46,10 @@ int main(int argc, char *argv[])
   
   int matches;
   regmatch_t items;
-
-  printf("Testing nickname \n");
   
   if (strlen(name) < 12)
   {
-    reti = regexec(&regularexpression, name, matches, &items, 0);
+    reti = regexec(&regex, name, matches, &items, 0);
     if (reti == 0)
     {
 	    printf("Nick %s is accepted \n", name);
@@ -60,7 +64,8 @@ int main(int argc, char *argv[])
   {
     printf("%s is too long (%ld vs 12 chars).\n", name, strlen(name));
   }
-  regfree(&regularexpression);
+  regfree(&regex);
+
 
   struct addrinfo addrs, *ptr;
   memset(&addrs, 0, sizeof(addrs));
@@ -136,6 +141,34 @@ int main(int argc, char *argv[])
   {
     perror("Name not valid \n");
     exit(1);
+  }
+
+  struct timeval tv;
+  tv.tv_sec = 5;
+  tv.tv_usec = 0;
+
+  while (1)
+  {
+    FD_ZERO(&readFd);
+    //FD_SET(STDIN, &readFd);
+    FD_SET(clientSocket, &readFd);
+
+    numbrBytes = select(clientSocket + 1, &readFd, NULL, NULL, NULL);
+    if (numbrBytes == -1)
+    {
+      printf("Wrong with Select \n");
+      exit(1);
+    }
+
+    if (FD_ISSET(clientSocket, &readFd))
+    {
+      printf("Servern lurkar \n");
+    }
+
+    if (FD_ISSET(STDIN, &readFd))
+    {
+      printf("Användaren lurkar \n");
+    }
   }
 
   //close(clientSocket);
