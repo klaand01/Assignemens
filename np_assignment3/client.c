@@ -27,6 +27,41 @@ int main(int argc, char *argv[])
   printf("Connected to %s:%s \n", Desthost, Destport);
   char *name = argv[2];
 
+  char *expression = "^[A-Za-z_]+$";
+  regex_t regularexpression;
+  int reti;
+  
+  reti = regcomp(&regularexpression, expression, REG_EXTENDED);
+  if (reti)
+  {
+    perror("Could not compile regex.\n");
+    exit(1);
+  }
+  
+  int matches;
+  regmatch_t items;
+
+  printf("Testing nickname \n");
+  
+  if (strlen(name) < 12)
+  {
+    reti = regexec(&regularexpression, name, matches, &items, 0);
+    if (reti == 0)
+    {
+	    printf("Nick %s is accepted \n", name);
+    }
+    else
+    {
+	    printf("%s is not accepted.\n", name);
+      exit(1);
+    }
+  }
+  else
+  {
+    printf("%s is too long (%ld vs 12 chars).\n", name, strlen(name));
+  }
+  regfree(&regularexpression);
+
   struct addrinfo addrs, *ptr;
   memset(&addrs, 0, sizeof(addrs));
   addrs.ai_family = AF_UNSPEC;
@@ -56,43 +91,52 @@ int main(int argc, char *argv[])
     perror("Client not connected \n");
     exit(1);
   }
+  printf("Client connected \n");
+  
+
+  memset(&buf, 0, sizeof(buf));
+  numbrBytes = recv(clientSocket, &buf, MAXDATA, 0);
+  if (numbrBytes == -1)
+  {
+    perror("Wrong with message \n");
+    exit(1);
+  }
+  printf("Server: '%s' \n", buf);
+
+  if (strcmp(buf, "HELLO 1\n") == 0)
+  {
+    printf("Protocol supported, sending nickname \n");
+  }
   else
   {
-    printf("Client connected \n");
+    perror("Protocol not supported, closing down \n");
+    exit(1);
+  }  
+
+  sprintf(buf, "NICK %s\n", name);
+  numbrBytes = send(clientSocket, buf, sizeof(buf), 0);
+  if (numbrBytes == -1)
+  {
+    perror("Send not gone through \n");
+    exit(1);
+  }
+  printf("Sent name \n");
+
+
+  memset(&buf, 0, sizeof(buf));
+  numbrBytes = recv(clientSocket, &buf, MAXDATA, 0);
+  if (numbrBytes == -1)
+  {
+    perror("Wrong with message \n");
+    exit(1);
+  }
+  printf("Server: '%s' \n", buf);
+
+  if (strcmp(buf, "OK\n") != 0)
+  {
+    perror("Name not valid \n");
+    exit(1);
   }
 
-  while (1)
-  {    
-    memset(&buf, 0, sizeof(buf));
-
-    numbrBytes = recv(clientSocket, buf, MAXDATA, 0);
-    if (numbrBytes == -1)
-    {
-      perror("Wrong with message \n");
-      exit(1);
-    }
-    printf("Server: '%s' \n", buf);
-
-    if (strcmp(buf, "HELLO 1\n") == 0)
-    {
-      printf("Protocol supported, sending nickname \n");
-    }
-    else
-    {
-      perror("Protocol not supported, closing down \n");
-      exit(1);
-    }
-
-    numbrBytes = send(clientSocket, name, strlen(name), 0);
-    printf("Name: %s \n", name);
-    if (numbrBytes == -1)
-    {
-      perror("Send not gone through \n");
-      exit(1);
-    }
-    printf("Sent name \n");
-
-  }
-
-  close(clientSocket);
+  //close(clientSocket);
 }
