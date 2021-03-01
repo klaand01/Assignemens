@@ -7,7 +7,6 @@
 #include <string.h>
 #include <regex.h>
 #include <unistd.h>
-#include <sys/time.h>
 
 #define MAXDATA 255
 #define STDIN 0
@@ -29,7 +28,6 @@ int main(int argc, char *argv[])
   int port=atoi(Destport);
   printf("Connected to %s:%s \n", Desthost, Destport);
   char *name = argv[2];
-  char *userInput;
   fd_set readFd;
 
 
@@ -63,7 +61,7 @@ int main(int argc, char *argv[])
   }
   else
   {
-    printf("%s is too long (%ld vs 12 chars).\n", name, strlen(name));
+    printf("%s is too long \n", name);
   }
   regfree(&regex);
 
@@ -76,6 +74,7 @@ int main(int argc, char *argv[])
 
   int clientSocket, returnValue, numbrBytes;
   char buf[MAXDATA];
+  char userInput;
 
   returnValue = getaddrinfo(argv[1], Destport, &addrs, &ptr);
   if (returnValue != 0)
@@ -144,10 +143,6 @@ int main(int argc, char *argv[])
     exit(1);
   }
 
-  struct timeval tv;
-  tv.tv_sec = 5;
-  tv.tv_usec = 0;
-
   while (1)
   {
     FD_ZERO(&readFd);
@@ -164,8 +159,8 @@ int main(int argc, char *argv[])
 
     if (FD_ISSET(STDIN, &readFd))
     {
-      scanf("%s", userInput);
-      sprintf(buf, "MSG %s\n", userInput);
+      scanf("%s", &userInput);
+      sprintf(buf, "MSG %s\n", &userInput);
 
       numbrBytes = send(clientSocket, buf, sizeof(buf), 0);
       if (numbrBytes == -1)
