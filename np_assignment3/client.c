@@ -30,42 +30,6 @@ int main(int argc, char *argv[])
   char *name = argv[2];
   fd_set readFd;
 
-
-  //Testart nickname
-  char *expression = "^[A-Za-z_]+$";
-  regex_t regex;
-  int ret;
-  
-  ret = regcomp(&regex, expression, REG_EXTENDED);
-  if (ret)
-  {
-    perror("Could not compile regex.\n");
-    exit(1);
-  }
-  
-  int matches;
-  regmatch_t items;
-  
-  if (strlen(name) < 12)
-  {
-    ret = regexec(&regex, name, matches, &items, 0);
-    if (ret == 0)
-    {
-	    printf("Nick %s is accepted \n", name);
-    }
-    else
-    {
-	    printf("%s is not accepted.\n", name);
-      exit(1);
-    }
-  }
-  else
-  {
-    printf("%s is too long \n", name);
-  }
-  regfree(&regex);
-
-
   struct addrinfo addrs, *ptr;
   memset(&addrs, 0, sizeof(addrs));
   addrs.ai_family = AF_UNSPEC;
@@ -127,7 +91,6 @@ int main(int argc, char *argv[])
   }
   printf("Sent name \n");
 
-
   memset(&buf, 0, sizeof(buf));
   numbrBytes = recv(clientSocket, &buf, MAXDATA, 0);
   if (numbrBytes == -1)
@@ -183,5 +146,5 @@ int main(int argc, char *argv[])
     }    
   }
 
-  //close(clientSocket);
+  close(clientSocket);
 }

@@ -6,6 +6,7 @@
 #include <netdb.h>
 #include <regex.h>
 #include <string.h>
+#include <unistd.h>
 
 
 
@@ -89,7 +90,7 @@ int main(int argc, char *argv[])
 
   int clientSocket, bytes;
   char buf[MAXDATA];
-  char *nick, *name;
+  char nick[20], name[20];
 
   char *expression = "^[A-Za-z_]+$";
   regex_t regex;
@@ -117,15 +118,17 @@ int main(int argc, char *argv[])
       perror("Message not recieved \n");
       exit(1);
     }
-    printf("Revieved from client: '%s'\n", buf);
+    printf("Receieved from client: '%s'\n", buf);
 
 
     //Check nickname
     sscanf(buf, "%s %s", nick, name);
+    printf("Nick: %s Name: %s \n", nick, name);
+
     if (strcmp(nick, "NICK") == 0)
     {
       ret = regcomp(&regex, expression, REG_EXTENDED);
-      if (ret)
+      if (ret != 0)
       {
         perror("Could not compile regex.\n");
         continue;
@@ -134,32 +137,32 @@ int main(int argc, char *argv[])
       int matches;
       regmatch_t items;
       printf("Testing nickname \n");
-      
+
       ret = regexec(&regex, name, matches, &items, 0);
-      if(ret == 0 && strlen(name) < 12)
+      if ((strlen(name) < 12) && (ret == 0))
       {
-	      bytes = send(clientSocket, "OK\n", sizeof("OK\n"), 0);
+        printf("Nick %s is accepted \n", name);
+        bytes = send(clientSocket, "OK\n", sizeof("OK\n"), 0);
         if (bytes == -1)
         {
           perror("Message not sent \n");
           continue;
         }
-        printf("OK sent \n");
       }
       else
       {
-	      bytes = send(clientSocket, "ERROR\n", sizeof("ERROR\n"), 0);
+        printf("%s is not accepted \n", name);
+        bytes = send(clientSocket, "ERROR\n", sizeof("ERROR\n"), 0);
         if (bytes == -1)
         {
           perror("Message not sent \n");
           continue;
         }
-        printf("ERROR sent \n");
       }
       regfree(&regex);
     }
 
-    
+
 
 
 
