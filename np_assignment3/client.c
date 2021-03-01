@@ -34,10 +34,10 @@ int main(int argc, char *argv[])
   //Testart nickname
   char *expression = "^[A-Za-z_]+$";
   regex_t regex;
-  int reti;
+  int ret;
   
-  reti = regcomp(&regex, expression, REG_EXTENDED);
-  if (reti)
+  ret = regcomp(&regex, expression, REG_EXTENDED);
+  if (ret)
   {
     perror("Could not compile regex.\n");
     exit(1);
@@ -48,8 +48,8 @@ int main(int argc, char *argv[])
   
   if (strlen(name) < 12)
   {
-    reti = regexec(&regex, name, matches, &items, 0);
-    if (reti == 0)
+    ret = regexec(&regex, name, matches, &items, 0);
+    if (ret == 0)
     {
 	    printf("Nick %s is accepted \n", name);
     }
@@ -143,9 +143,10 @@ int main(int argc, char *argv[])
     exit(1);
   }
 
+  FD_ZERO(&readFd);
+
   while (1)
   {
-    FD_ZERO(&readFd);
     FD_SET(STDIN, &readFd);
     FD_SET(clientSocket, &readFd);
     memset(&buf, 0, sizeof(buf));
