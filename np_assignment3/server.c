@@ -12,49 +12,46 @@
 
 #define MAXDATA 255
 
-void checkNickName(char buf[], int clientSocket, int bytes, char *name[], char nick[])
+void checkNickName(char buf[], int clientSocket, int bytes, char *name[], char type[])
 {
   char *expression = "^[A-Za-z_]+$";
   regex_t regex;
   int ret;
 
-  sscanf(buf, "%s %s", nick, *name);
-  if (strcmp(nick, "NICK") == 0)
+  ret = regcomp(&regex, expression, REG_EXTENDED);
+  if (ret != 0)
   {
-    ret = regcomp(&regex, expression, REG_EXTENDED);
-    if (ret != 0)
+    perror("Could not compile regex.\n");
+    exit(1);
+  }
+
+  int matches;
+  regmatch_t items;
+
+  ret = regexec(&regex, *name, matches, &items, 0);
+  if ((strlen(*name) < 12) && (ret == 0))
+  {
+    printf("Nickname is accepted \n");
+
+    bytes = send(clientSocket, "OK\n", sizeof("OK\n"), 0);
+    if (bytes == -1)
     {
-      perror("Could not compile regex.\n");
+      perror("Message not sent \n");
       exit(1);
     }
-
-    int matches;
-    regmatch_t items;
-
-    ret = regexec(&regex, *name, matches, &items, 0);
-    if ((strlen(*name) < 12) && (ret == 0))
-    {
-      printf("Nickname is accepted \n");
-      bytes = send(clientSocket, "OK\n", sizeof("OK\n"), 0);
-      if (bytes == -1)
-      {
-        perror("Message not sent \n");
-        exit(1);
-      }
-    }
-    else
-    {
-      printf("%s is not accepted \n", *name);
-      bytes = send(clientSocket, "ERROR\n", sizeof("ERROR\n"), 0);
-      if (bytes == -1)
-      {
-        perror("Message not sent \n");
-        exit(1);
-      }
-    }
-
-    regfree(&regex);
   }
+  else
+  {
+    printf("%s is not accepted \n", *name);
+    bytes = send(clientSocket, "ERROR\n", sizeof("ERROR\n"), 0);
+    if (bytes == -1)
+    {
+      perror("Message not sent \n");
+      exit(1);
+    }
+  }
+
+  regfree(&regex);
 }
 
 
@@ -138,117 +135,85 @@ int main(int argc, char *argv[])
   int clientSocket, bytes;
   char buf[MAXDATA];
   char *name[100];
-  char nick[20];
+  char type[20];
 
   fd_set readFd;
-  fd_set tempReadFd;
   FD_ZERO(&readFd);
-  FD_ZERO(&tempReadFd);
-  int maxFd, newSocket;
-  maxFd = clientSocket;
-
+  int newSocket, maxFd;
+  
+  FD_SET(serverSocket, &readFd);
+  maxFd = serverSocket;
 
   while (1)
   {
-    clientSocket = accept(serverSocket, (struct sockaddr *)&theirAddrs, &theirSize);
-    if (clientSocket == -1)
-    {
-      perror("Client socket not accepted \n");
-      continue;
-    }
-
-    char myAddress[20];
-	  const char *myAdd;
-    getsockname(clientSocket, (struct sockaddr *)&theirAddrs, &theirSize);
-    myAdd = inet_ntop(theirAddrs.sin_family, &theirAddrs.sin_addr, myAddress, sizeof(myAddress));
-    printf("New connection from %s:%d \n", myAdd, ntohs(theirAddrs.sin_port));
-    
-    bytes = send(clientSocket, "HELLO 1\n", sizeof("HELLO 1\n"), 0);
+    bytes = select(maxFd + 1, &readFd, NULL, NULL, NULL);
     if (bytes == -1)
     {
-      perror("Message not sent \n");
-      continue;
-    }
-
-    bytes = recv(clientSocket, &buf, sizeof(buf), 0);
-    if (bytes == -1)
-    {
-      perror("Message not recieved \n");
+      printf("Wrong with select \n");
       exit(1);
     }
-    printf("Receieved from client: '%s'\n", buf);
 
-    checkNickName(buf, clientSocket, bytes, name, nick);
-
-    while (1)
+    for (int i = 0; i <= maxFd; i++)
     {
-      memset(&buf, 0, sizeof(buf));
-      FD_SET(clientSocket, &readFd);
-
-      bytes = select(maxFd + 1, &readFd, NULL, NULL, NULL);
-      if (bytes == -1)
+      if (FD_ISSET(i, &readFd))
       {
-        printf("Wrong with select \n");
-        exit(1);
-      }
-
-      for (int i = 0; i <= maxFd; i++)
-      {
-        if (FD_ISSET(i, &readFd))
+        if (i == serverSocket)
         {
-          if (i != clientSocket)
+          clientSocket = accept(serverSocket, (struct sockaddr *)&theirAddrs, &theirSize);
+          if (clientSocket == -1)
           {
-            newSocket = accept(serverSocket, (struct sockaddr *)&theirAddrs, &theirSize);
-            if (clientSocket == -1)
-            {
-              perror("Client socket not accepted \n");
-            }
-            else
-            {
-              FD_SET(newSocket, &readFd);
-              if (newSocket > maxFd)
-              {
-                maxFd = newSocket;
-              }
-
-              char myAddress[20];
-	            const char *myAdd;
-              getsockname(clientSocket, (struct sockaddr *)&theirAddrs, &theirSize);
-              myAdd = inet_ntop(theirAddrs.sin_family, &theirAddrs.sin_addr, myAddress, sizeof(myAddress));
-              printf("New connection from %s:%d \n", myAdd, ntohs(theirAddrs.sin_port));
-
-              printf("Client receive\n");
-              bytes = recv(clientSocket, &buf, sizeof(buf), 0);
-              if (bytes == -1)
-              {
-                perror("Message not recieved \n");
-                exit(1);
-              }
-              if (bytes == 0)
-              {
-                printf("Client hung up \n");
-                FD_CLR(newSocket, &readFd);
-                close(newSocket);
-              }
-              printf("Receieved from client: '%s'\n", buf);
-            }
+            perror("Client socket not accepted \n");
+            continue;
           }
-          else
+
+          FD_SET(clientSocket, &readFd);
+          if (clientSocket > maxFd)
+          {
+            maxFd = clientSocket;
+          }
+
+          char myAddress[20];
+	        const char *myAdd;
+          getsockname(clientSocket, (struct sockaddr *)&theirAddrs, &theirSize);
+          myAdd = inet_ntop(theirAddrs.sin_family, &theirAddrs.sin_addr, myAddress, sizeof(myAddress));
+          printf("New connection from %s:%d \n", myAdd, ntohs(theirAddrs.sin_port));
+
+          bytes = send(clientSocket, "HELLO 1\n", sizeof("HELLO 1\n"), 0);
+          if (bytes == -1)
+          {
+            perror("Message not sent \n");
+            continue;
+          }
+        }
+
+        else
+        {
+          memset(&buf, 0, sizeof(buf));
+          bytes = recv(clientSocket, &buf, sizeof(buf), 0);
+          if (bytes == -1)
+          {
+            perror("Message not recieved \n");
+            exit(1);
+          }
+          printf("Receieved from client: '%s'\n", buf);
+          sscanf(buf, "%s %s", type, *name);
+
+          if (strcmp(type, "NICK") == 0)
+          {
+            checkNickName(buf, clientSocket, bytes, name, type);
+          }
+
+          if (strcmp(type, "MSG") == 0)
           {
             printf("Client receive\n");
-            bytes = recv(clientSocket, &buf, sizeof(buf), 0);
-            if (bytes == -1)
-            {
-              perror("Message not recieved \n");
-              exit(1);
-            }
+            printf("Receieved from client: '%s'\n", buf);
+
             if (bytes == 0)
             {
               printf("Client hung up \n");
               FD_CLR(clientSocket, &readFd);
               close(clientSocket);
             }
-            printf("Receieved from client: '%s'\n", buf);
           }
         }
       }
