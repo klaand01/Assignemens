@@ -35,6 +35,7 @@ int main(int argc, char *argv[])
   addrs.ai_family = AF_UNSPEC;
   addrs.ai_socktype = SOCK_STREAM;
   addrs.ai_protocol = IPPROTO_TCP;
+  addrs.ai_flags = AI_PASSIVE;
 
   int clientSocket, returnValue, numbrBytes;
   char buf[MAXDATA];
