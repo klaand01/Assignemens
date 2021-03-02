@@ -8,7 +8,7 @@
 #include <regex.h>
 #include <unistd.h>
 
-#define MAXDATA 255
+#define MAXDATA 256
 #define STDIN 0
 
 int main(int argc, char *argv[])
@@ -39,7 +39,7 @@ int main(int argc, char *argv[])
 
   int clientSocket, returnValue, numbrBytes;
   char buf[MAXDATA];
-  char userInput;
+  char userInput[MAXDATA];
 
   returnValue = getaddrinfo(argv[1], Destport, &addrs, &ptr);
   if (returnValue != 0)
@@ -124,8 +124,8 @@ int main(int argc, char *argv[])
 
     if (FD_ISSET(STDIN, &readFd))
     {
-      scanf("%s", &userInput);
-      sprintf(buf, "MSG %s\n", &userInput);
+      fgets(userInput, MAXDATA, stdin);
+      sprintf(buf, "MSG %s", userInput);
 
       numbrBytes = send(clientSocket, buf, sizeof(buf), 0);
       if (numbrBytes == -1)
@@ -144,7 +144,7 @@ int main(int argc, char *argv[])
         exit(1);
       }
       printf("Server: %s \n", buf);
-    }    
+    }
   }
 
   close(clientSocket);

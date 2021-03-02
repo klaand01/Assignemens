@@ -138,7 +138,9 @@ int main(int argc, char *argv[])
   char type[20];
 
   fd_set readFd;
+  fd_set tempFd;
   FD_ZERO(&readFd);
+  FD_ZERO(&tempFd);
   int newSocket, maxFd;
   
   FD_SET(serverSocket, &readFd);
@@ -146,7 +148,8 @@ int main(int argc, char *argv[])
 
   while (1)
   {
-    bytes = select(maxFd + 1, &readFd, NULL, NULL, NULL);
+    tempFd = readFd;
+    bytes = select(maxFd + 1, &tempFd, NULL, NULL, NULL);
     if (bytes == -1)
     {
       printf("Wrong with select \n");
@@ -155,7 +158,7 @@ int main(int argc, char *argv[])
 
     for (int i = 0; i <= maxFd; i++)
     {
-      if (FD_ISSET(i, &readFd))
+      if (FD_ISSET(i, &tempFd))
       {
         if (i == serverSocket)
         {
@@ -185,17 +188,22 @@ int main(int argc, char *argv[])
             continue;
           }
         }
-
         else
         {
-          memset(&buf, 0, sizeof(buf));
-          bytes = recv(clientSocket, &buf, sizeof(buf), 0);
+          bytes = recv(i, &buf, sizeof(buf), 0);
           if (bytes == -1)
           {
             perror("Message not recieved \n");
+            FD_CLR(i, &readFd);
+            close(clientSocket);
             exit(1);
           }
-          printf("Receieved from client: '%s'\n", buf);
+          if (bytes == 0)
+          {
+            printf("Client hung up \n");
+            FD_CLR(i, &readFd);
+            close(clientSocket);
+          }
           sscanf(buf, "%s %s", type, *name);
 
           if (strcmp(type, "NICK") == 0)
@@ -205,16 +213,9 @@ int main(int argc, char *argv[])
 
           if (strcmp(type, "MSG") == 0)
           {
-            printf("Client receive\n");
-            printf("Receieved from client: '%s'\n", buf);
-
-            if (bytes == 0)
-            {
-              printf("Client hung up \n");
-              FD_CLR(clientSocket, &readFd);
-              close(clientSocket);
-            }
+            printf("Receieved from client: '%s'", buf);
           }
+          memset(&type, 0, sizeof(type));
         }
       }
     }
