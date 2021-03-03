@@ -145,7 +145,7 @@ int main(int argc, char *argv[])
         perror("Wrong with message \n");
         exit(1);
       }
-      printf("Server: %s \n", buf);
+      printf("%s", buf);
     }
   }
 

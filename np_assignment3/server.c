@@ -99,7 +99,7 @@ int main(int argc, char *argv[])
 
   int clientSocket, sentBytes, recvBytes;
   char buf[MAXDATA];
-  char regName[20];
+  char msg[MAXDATA];
   char arrNames[50][100];
   char type[20];
 
@@ -176,7 +176,6 @@ int main(int argc, char *argv[])
 
           if (strcmp(type, "NICK") == 0)
           {
-            sscanf(buf, "%s %s", type, regName);
             sscanf(buf, "%s %s", type, arrNames[i]);
             printf("Name recv: %s\n", arrNames[i]);
 
@@ -195,9 +194,9 @@ int main(int argc, char *argv[])
             int matches = 0;
             regmatch_t items;
 
-            ret = regexec(&regex, regName, matches, &items, 0);
+            ret = regexec(&regex, arrNames[i], matches, &items, 0);
 
-            if ((strlen(regName) < 12) && (ret == 0))
+            if ((strlen(arrNames[i]) < 12) && (ret == 0))
             {
               printf("Nickname is accepted \n");
 
@@ -210,14 +209,14 @@ int main(int argc, char *argv[])
             }
             else
             {
-              printf("%s is not accepted \n", regName);
+              printf("%s is not accepted \n", arrNames[i]);
               sentBytes = send(i, "ERROR\n", sizeof("ERROR\n"), 0);
               if (sentBytes == -1)
               {
                 perror("Message not sent \n");
                 exit(1);
               }
-              }
+            }
 
             regfree(&regex);
             //checkNickName(buf, i, sentBytes, regName, type);
@@ -225,14 +224,14 @@ int main(int argc, char *argv[])
 
           if (strcmp(type, "MSG") == 0)
           {
-            printf("Name recv: %s\n", arrNames[i]);
+            sprintf(msg, "%s: %s", arrNames[i], buf);
             for (int j = 0; j <= maxFd; j++)
             {
               if (FD_ISSET(j, &readFd))
               {
                 if (j != serverSocket && j != i)
                 {
-                  sentBytes = send(j, buf, sizeof(buf), 0);
+                  sentBytes = send(j, msg, sizeof(msg), 0);
                   if (sentBytes == -1)
                   {
                     perror("Message not sent \n");
