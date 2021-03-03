@@ -28,7 +28,6 @@ int main(int argc, char *argv[])
   int port=atoi(Destport);
   printf("Connected to %s:%s \n", Desthost, Destport);
   char *name = argv[2];
-  fd_set readFd;
 
   struct addrinfo addrs, *ptr;
   memset(&addrs, 0, sizeof(addrs));
@@ -107,22 +106,25 @@ int main(int argc, char *argv[])
     exit(1);
   }
 
-  FD_ZERO(&readFd);
+  fd_set readfd;
+  fd_set tempfd;
+  FD_ZERO(&readfd);
+  FD_SET(STDIN, &tempfd);
+  FD_SET(clientSocket, &tempfd);
 
   while (1)
   {
-    FD_SET(STDIN, &readFd);
-    FD_SET(clientSocket, &readFd);
+    readfd = tempfd;
     memset(&buf, 0, sizeof(buf));
 
-    numbrBytes = select(clientSocket + 1, &readFd, NULL, NULL, NULL);
+    numbrBytes = select(clientSocket + 1, &readfd, NULL, NULL, NULL);
     if (numbrBytes == -1)
     {
       printf("Wrong with select \n");
       exit(1);
     }
 
-    if (FD_ISSET(STDIN, &readFd))
+    if (FD_ISSET(STDIN, &readfd))
     {
       fgets(userInput, MAXDATA, stdin);
       sprintf(buf, "MSG %s", userInput);
@@ -135,7 +137,7 @@ int main(int argc, char *argv[])
       }
     }
 
-    if (FD_ISSET(clientSocket, &readFd))
+    if (FD_ISSET(clientSocket, &readfd))
     {
       numbrBytes = recv(clientSocket, &buf, MAXDATA, 0);
       if (numbrBytes == -1)

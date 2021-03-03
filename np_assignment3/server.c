@@ -11,47 +11,12 @@
 
 #define MAXDATA 255
 
-void checkNickName(char buf[], int i, int sentBytes, char *name[], char type[])
+void checkNickName(char buf[], int i, int sentBytes, char *regName[], char type[])
 {
-  char *expression = "^[A-Za-z_]+$";
-  regex_t regex;
-  int ret;
+  
 
-  ret = regcomp(&regex, expression, REG_EXTENDED);
-  if (ret != 0)
-  {
-    perror("Could not compile regex.\n");
-    exit(1);
-  }
 
-  int matches = 0;
-  regmatch_t items;
-
-  ret = regexec(&regex, *name, matches, &items, 0);
-
-  if ((strlen(*name) < 12) && (ret == 0))
-  {
-    printf("Nickname is accepted \n");
-
-    sentBytes = send(i, "OK\n", sizeof("OK\n"), 0);
-    if (sentBytes == -1)
-    {
-      perror("Message not sent \n");
-      exit(1);
-    }
-  }
-  else
-  {
-    printf("%s is not accepted \n", *name);
-    sentBytes = send(i, "ERROR\n", sizeof("ERROR\n"), 0);
-    if (sentBytes == -1)
-    {
-      perror("Message not sent \n");
-      exit(1);
-    }
-  }
-
-  regfree(&regex);
+  
 }
 
 
@@ -134,8 +99,8 @@ int main(int argc, char *argv[])
 
   int clientSocket, sentBytes, recvBytes;
   char buf[MAXDATA];
-  char *name[20];
-  char *arrNames;
+  char regName[20];
+  char arrNames[50][100];
   char type[20];
 
   fd_set readFd;
@@ -211,15 +176,56 @@ int main(int argc, char *argv[])
 
           if (strcmp(type, "NICK") == 0)
           {
-            sscanf(buf, "%s %s", type, *name);
-            //arrNames = strdup(*name);
-            //printf("Name recv: %s\n", arrNames);
+            sscanf(buf, "%s %s", type, regName);
+            sscanf(buf, "%s %s", type, arrNames[i]);
+            printf("Name recv: %s\n", arrNames[i]);
 
-            checkNickName(buf, i, sentBytes, name, type);
+
+            char *expression = "^[A-Za-z_]+$";
+            regex_t regex;
+            int ret;
+
+            ret = regcomp(&regex, expression, REG_EXTENDED);
+            if (ret != 0)
+            {
+              perror("Could not compile regex.\n");
+              exit(1);
+            }
+
+            int matches = 0;
+            regmatch_t items;
+
+            ret = regexec(&regex, regName, matches, &items, 0);
+
+            if ((strlen(regName) < 12) && (ret == 0))
+            {
+              printf("Nickname is accepted \n");
+
+              sentBytes = send(i, "OK\n", sizeof("OK\n"), 0);
+              if (sentBytes == -1)
+              {
+                perror("Message not sent \n");
+                exit(1);
+              }
+            }
+            else
+            {
+              printf("%s is not accepted \n", regName);
+              sentBytes = send(i, "ERROR\n", sizeof("ERROR\n"), 0);
+              if (sentBytes == -1)
+              {
+                perror("Message not sent \n");
+                exit(1);
+              }
+              }
+
+            regfree(&regex);
+            //checkNickName(buf, i, sentBytes, regName, type);
           }
 
           if (strcmp(type, "MSG") == 0)
           {
+            printf("Name recv: %s\n", arrNames[i]);
             for (int j = 0; j <= maxFd; j++)
             {
               if (FD_ISSET(j, &readFd))
@@ -236,7 +242,7 @@ int main(int argc, char *argv[])
               }
             }
           }
-
+          
           memset(&type, 0, sizeof(type));
         }
       }
