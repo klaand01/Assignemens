@@ -133,6 +133,7 @@ int main(int argc, char *argv[])
   socklen_t theirSize = sizeof(theirAddrs);
 
   int clientSocket, bytes;
+  int sockets[100];
   char buf[MAXDATA];
   char *name[100];
   char type[20];
@@ -168,6 +169,7 @@ int main(int argc, char *argv[])
             perror("Client socket not accepted \n");
             continue;
           }
+          sockets[i] = clientSocket;
 
           FD_SET(clientSocket, &readFd);
           if (clientSocket > maxFd)
@@ -195,26 +197,36 @@ int main(int argc, char *argv[])
           {
             perror("Message not recieved \n");
             FD_CLR(i, &readFd);
-            close(clientSocket);
+            close(i);
             exit(1);
           }
-          if (bytes == 0)
-          {
-            printf("Client hung up \n");
-            FD_CLR(i, &readFd);
-            close(clientSocket);
-          }
-          sscanf(buf, "%s %s", type, *name);
+          sscanf(buf, "%s", type);
 
           if (strcmp(type, "NICK") == 0)
           {
+            sscanf(buf, "%s %s", type, *name);
             checkNickName(buf, clientSocket, bytes, name, type);
           }
 
           if (strcmp(type, "MSG") == 0)
           {
-            printf("Receieved from client: '%s'", buf);
+            for (int j = 0; j <= maxFd; j++)
+            {
+              if (FD_ISSET(j, &readFd))
+              {
+                if (j != serverSocket && j != i)
+                {
+                  bytes = send(j, buf, sizeof(buf), 0);
+                  if (bytes == -1)
+                  {
+                    perror("Message not sent \n");
+                    continue;
+                  }
+                }
+              }
+            }
           }
+
           memset(&type, 0, sizeof(type));
         }
       }

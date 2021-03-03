@@ -8,7 +8,7 @@
 #include <regex.h>
 #include <unistd.h>
 
-#define MAXDATA 256
+#define MAXDATA 255
 #define STDIN 0
 
 int main(int argc, char *argv[])
