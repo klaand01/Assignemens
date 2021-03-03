@@ -9,10 +9,9 @@
 #include <unistd.h>
 #include <arpa/inet.h>
 
-
 #define MAXDATA 255
 
-void checkNickName(char buf[], int clientSocket, int bytes, char *name[], char type[])
+void checkNickName(char buf[], int i, int sentBytes, char *name[], char type[])
 {
   char *expression = "^[A-Za-z_]+$";
   regex_t regex;
@@ -25,16 +24,17 @@ void checkNickName(char buf[], int clientSocket, int bytes, char *name[], char t
     exit(1);
   }
 
-  int matches;
+  int matches = 0;
   regmatch_t items;
 
   ret = regexec(&regex, *name, matches, &items, 0);
+
   if ((strlen(*name) < 12) && (ret == 0))
   {
     printf("Nickname is accepted \n");
 
-    bytes = send(clientSocket, "OK\n", sizeof("OK\n"), 0);
-    if (bytes == -1)
+    sentBytes = send(i, "OK\n", sizeof("OK\n"), 0);
+    if (sentBytes == -1)
     {
       perror("Message not sent \n");
       exit(1);
@@ -43,8 +43,8 @@ void checkNickName(char buf[], int clientSocket, int bytes, char *name[], char t
   else
   {
     printf("%s is not accepted \n", *name);
-    bytes = send(clientSocket, "ERROR\n", sizeof("ERROR\n"), 0);
-    if (bytes == -1)
+    sentBytes = send(i, "ERROR\n", sizeof("ERROR\n"), 0);
+    if (sentBytes == -1)
     {
       perror("Message not sent \n");
       exit(1);
@@ -132,10 +132,10 @@ int main(int argc, char *argv[])
   struct sockaddr_in theirAddrs;
   socklen_t theirSize = sizeof(theirAddrs);
 
-  int clientSocket, bytes;
-  int sockets[100];
+  int clientSocket, sentBytes, recvBytes;
   char buf[MAXDATA];
-  char *name[100];
+  char *name[20];
+  char *arrNames;
   char type[20];
 
   fd_set readFd;
@@ -150,8 +150,8 @@ int main(int argc, char *argv[])
   while (1)
   {
     tempFd = readFd;
-    bytes = select(maxFd + 1, &tempFd, NULL, NULL, NULL);
-    if (bytes == -1)
+    sentBytes = select(maxFd + 1, &tempFd, NULL, NULL, NULL);
+    if (sentBytes == -1)
     {
       printf("Wrong with select \n");
       exit(1);
@@ -169,7 +169,6 @@ int main(int argc, char *argv[])
             perror("Client socket not accepted \n");
             continue;
           }
-          sockets[i] = clientSocket;
 
           FD_SET(clientSocket, &readFd);
           if (clientSocket > maxFd)
@@ -183,8 +182,8 @@ int main(int argc, char *argv[])
           myAdd = inet_ntop(theirAddrs.sin_family, &theirAddrs.sin_addr, myAddress, sizeof(myAddress));
           printf("New connection from %s:%d \n", myAdd, ntohs(theirAddrs.sin_port));
 
-          bytes = send(clientSocket, "HELLO 1\n", sizeof("HELLO 1\n"), 0);
-          if (bytes == -1)
+          sentBytes = send(clientSocket, "HELLO 1\n", sizeof("HELLO 1\n"), 0);
+          if (sentBytes == -1)
           {
             perror("Message not sent \n");
             continue;
@@ -192,20 +191,31 @@ int main(int argc, char *argv[])
         }
         else
         {
-          bytes = recv(i, &buf, sizeof(buf), 0);
-          if (bytes == -1)
+          recvBytes = recv(i, &buf, sizeof(buf), 0);
+          if (recvBytes == -1)
           {
             perror("Message not recieved \n");
-            FD_CLR(i, &readFd);
             close(i);
-            exit(1);
+            FD_CLR(i, &readFd);
           }
-          sscanf(buf, "%s", type);
+          if (recvBytes == 0)
+          {
+            printf("Client hung up \n");
+            close(i);
+            FD_CLR(i, &readFd);
+          }
+          else
+          {
+            sscanf(buf, "%s", type);
+          }
 
           if (strcmp(type, "NICK") == 0)
           {
             sscanf(buf, "%s %s", type, *name);
-            checkNickName(buf, clientSocket, bytes, name, type);
+            //arrNames = strdup(*name);
+            //printf("Name recv: %s\n", arrNames);
+
+            checkNickName(buf, i, sentBytes, name, type);
           }
 
           if (strcmp(type, "MSG") == 0)
@@ -216,8 +226,8 @@ int main(int argc, char *argv[])
               {
                 if (j != serverSocket && j != i)
                 {
-                  bytes = send(j, buf, sizeof(buf), 0);
-                  if (bytes == -1)
+                  sentBytes = send(j, buf, sizeof(buf), 0);
+                  if (sentBytes == -1)
                   {
                     perror("Message not sent \n");
                     continue;
