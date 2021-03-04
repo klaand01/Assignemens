@@ -11,12 +11,16 @@
 
 #define MAXDATA 255
 
-void checkNickName(char buf[], int i, int sentBytes, char *regName[], char type[])
+void* getAddrs(struct sockaddr* addr)
 {
-  
-
-
-  
+  if (addr->sa_family == AF_INET)
+  {
+    return &(((struct sockaddr_in*)addr)->sin_addr);
+  }
+  else
+  {
+    return &((struct sockaddr_in6*)addr)->sin6_addr;
+  }
 }
 
 
@@ -144,10 +148,10 @@ int main(int argc, char *argv[])
           char myAddress[20];
 	        const char *myAdd;
           getsockname(clientSocket, (struct sockaddr *)&theirAddrs, &theirSize);
-          myAdd = inet_ntop(theirAddrs.sin_family, &theirAddrs.sin_addr, myAddress, sizeof(myAddress));
+          myAdd = inet_ntop(theirAddrs.sin_family, getAddrs((struct sockaddr *)&theirAddrs), myAddress, sizeof(myAddress));
           printf("New connection from %s:%d \n", myAdd, ntohs(theirAddrs.sin_port));
 
-          sentBytes = send(clientSocket, "HELLO 1\n", sizeof("HELLO 1\n"), 0);
+          sentBytes = send(clientSocket, "HELLO 1\n", strlen("HELLO 1\n"), 0);
           if (sentBytes == -1)
           {
             perror("Message not sent \n");
@@ -177,9 +181,8 @@ int main(int argc, char *argv[])
           if (strcmp(type, "NICK") == 0)
           {
             sscanf(buf, "%s %s", type, arrNames[i]);
-            printf("Name recv: %s\n", arrNames[i]);
 
-
+            //Checking nickname, to have this in a function didn't work
             char *expression = "^[A-Za-z_]+$";
             regex_t regex;
             int ret;
@@ -200,26 +203,25 @@ int main(int argc, char *argv[])
             {
               printf("Nickname is accepted \n");
 
-              sentBytes = send(i, "OK\n", sizeof("OK\n"), 0);
+              sentBytes = send(i, "OK\n", strlen("OK\n"), 0);
               if (sentBytes == -1)
               {
                 perror("Message not sent \n");
-                exit(1);
+                close(serverSocket);
               }
             }
             else
             {
               printf("%s is not accepted \n", arrNames[i]);
-              sentBytes = send(i, "ERROR\n", sizeof("ERROR\n"), 0);
+              sentBytes = send(i, "ERROR\n", strlen("ERROR\n"), 0);
               if (sentBytes == -1)
               {
                 perror("Message not sent \n");
-                exit(1);
+                close(serverSocket);
               }
             }
 
             regfree(&regex);
-            //checkNickName(buf, i, sentBytes, regName, type);
           }
 
           if (strcmp(type, "MSG") == 0)
@@ -231,7 +233,7 @@ int main(int argc, char *argv[])
               {
                 if (j != serverSocket && j != i)
                 {
-                  sentBytes = send(j, msg, sizeof(msg), 0);
+                  sentBytes = send(j, msg, strlen(msg), 0);
                   if (sentBytes == -1)
                   {
                     perror("Message not sent \n");

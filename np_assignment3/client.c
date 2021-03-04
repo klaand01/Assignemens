@@ -29,6 +29,43 @@ int main(int argc, char *argv[])
   printf("Connected to %s:%s \n", Desthost, Destport);
   char *name = argv[2];
 
+  //Checking nickname
+  char *expression="^[A-Za-z_]+$";
+  regex_t regex;
+  int ret;
+  
+  ret = regcomp(&regex, expression, REG_EXTENDED);
+  if(ret)
+  {
+    perror("Could not compile regex.\n");
+    exit(1);
+  }
+  
+  int matches = 0;
+  regmatch_t items;
+    
+  
+  if(strlen(name) < 12)
+  {
+    ret = regexec(&regex, name, matches, &items, 0);
+
+    if(ret == 0)
+    {
+	    printf("Nick %s is accepted.\n", name);
+    }
+    else
+    {
+	    printf("%s is not accepted.\n", name);
+      exit(1);
+    }
+  }
+  else
+  {
+    printf("%s is too long.\n", name);
+  }
+  
+  regfree(&regex);
+
   struct addrinfo addrs, *ptr;
   memset(&addrs, 0, sizeof(addrs));
   addrs.ai_family = AF_UNSPEC;
@@ -58,17 +95,17 @@ int main(int argc, char *argv[])
   if (returnValue == -1)
   {
     perror("Client not connected \n");
-    exit(1);
+    close(clientSocket);
   }
   printf("Client connected \n");
   
 
   memset(&buf, 0, sizeof(buf));
-  numbrBytes = recv(clientSocket, &buf, MAXDATA, 0);
+  numbrBytes = recv(clientSocket, &buf, sizeof(buf), 0);
   if (numbrBytes == -1)
   {
     perror("Wrong with message \n");
-    exit(1);
+    close(clientSocket);
   }
   printf("Server: '%s' \n", buf);
 
@@ -79,36 +116,37 @@ int main(int argc, char *argv[])
   else
   {
     perror("Protocol not supported, closing down \n");
-    exit(1);
+    close(clientSocket);
   }  
 
   sprintf(buf, "NICK %s\n", name);
-  numbrBytes = send(clientSocket, buf, sizeof(buf), 0);
+  numbrBytes = send(clientSocket, buf, strlen(buf), 0);
   if (numbrBytes == -1)
   {
     perror("Send not gone through \n");
-    exit(1);
+    close(clientSocket);
   }
   printf("Sent name \n");
 
   memset(&buf, 0, sizeof(buf));
-  numbrBytes = recv(clientSocket, &buf, MAXDATA, 0);
+  numbrBytes = recv(clientSocket, &buf, sizeof(buf), 0);
   if (numbrBytes == -1)
   {
     perror("Wrong with message \n");
-    exit(1);
+    close(clientSocket);
   }
   printf("Server: '%s' \n", buf);
 
   if (strcmp(buf, "OK\n") != 0)
   {
     perror("Name not valid \n");
-    exit(1);
+    close(clientSocket);
   }
 
   fd_set readfd;
   fd_set tempfd;
   FD_ZERO(&readfd);
+  FD_ZERO(&tempfd);
   FD_SET(STDIN, &tempfd);
   FD_SET(clientSocket, &tempfd);
 
@@ -129,7 +167,7 @@ int main(int argc, char *argv[])
       fgets(userInput, MAXDATA, stdin);
       sprintf(buf, "MSG %s", userInput);
 
-      numbrBytes = send(clientSocket, buf, sizeof(buf), 0);
+      numbrBytes = send(clientSocket, buf, strlen(buf), 0);
       if (numbrBytes == -1)
       {
         perror("Send not gone through \n");
@@ -139,13 +177,22 @@ int main(int argc, char *argv[])
 
     if (FD_ISSET(clientSocket, &readfd))
     {
-      numbrBytes = recv(clientSocket, &buf, MAXDATA, 0);
+      numbrBytes = recv(clientSocket, &buf, sizeof(buf), 0);
       if (numbrBytes == -1)
       {
         perror("Wrong with message \n");
         exit(1);
       }
-      printf("%s", buf);
+      else if (numbrBytes == 0)
+      {
+        printf("Server closed down \n");
+        close(clientSocket);
+        FD_CLR(clientSocket, &readfd);
+      }
+      else
+      {
+        printf("%s", buf);
+      }
     }
   }
 
