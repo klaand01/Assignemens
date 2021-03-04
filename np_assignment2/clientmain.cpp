@@ -63,6 +63,7 @@ int main(int argc, char *argv[])
 
   struct timeval time;
   time.tv_sec = 2;
+  time.tv_usec = 0;
 
   returnValue = setsockopt(clientSocket, SOL_SOCKET, SO_RCVTIMEO, &time, sizeof(time));
   if (returnValue == -1)
@@ -71,7 +72,7 @@ int main(int argc, char *argv[])
     exit(1);
   }
 
-  struct calcProtocol cProtocol;
+  calcProtocol *proPtr = new calcProtocol;
   struct calcMessage cMessage;
   cMessage.type = htons(22);
   cMessage.message = htonl(0);
@@ -92,7 +93,7 @@ int main(int argc, char *argv[])
     }
 
     //Caclprotocol
-    sentBytes = recvfrom(clientSocket, &cProtocol, sizeof(cProtocol), 0, ptr->ai_addr, &ptr->ai_addrlen);
+    sentBytes = recvfrom(clientSocket, proPtr, sizeof(*proPtr), 0, ptr->ai_addr, &ptr->ai_addrlen);
     if (sentBytes == -1)
     {
       if (errno == EAGAIN)
@@ -119,14 +120,25 @@ int main(int argc, char *argv[])
     printf("NOT OK \n");
     exit(1);
   }
+
   
   //Calcprotocol calculations
-  operNumbr = ntohl(cProtocol.arith);
+  operNumbr = ntohl(proPtr->arith);
+
+  printf("Oper %d\n", operNumbr);
+
+  iNumb1 = ntohl(proPtr->inValue1);
+    iNumb2 = ntohl(proPtr->inValue2);
+
+    dNumb1 = proPtr->flValue1;
+    dNumb2 = proPtr->flValue2;
 
   if ((operNumbr >= 1) && (operNumbr <= 4))
   {
-    iNumb1 = ntohl(cProtocol.inValue1);
-    iNumb2 = ntohl(cProtocol.inValue2);
+    iNumb1 = ntohl(proPtr->inValue1);
+    iNumb2 = ntohl(proPtr->inValue2);
+
+
 
     switch (operNumbr)
     {
@@ -152,12 +164,12 @@ int main(int argc, char *argv[])
     }
 
     printf("Result: %d \n", iRes);
-    cProtocol.inResult = htonl(iRes);
+    proPtr->inResult = htonl(iRes);
   }
   else if ((operNumbr >= 5) && (operNumbr <= 8))
   {
-    dNumb1 = cProtocol.flValue1;
-    dNumb2 = cProtocol.flValue2;
+    dNumb1 = proPtr->flValue1;
+    dNumb2 = proPtr->flValue2;
 
     switch (operNumbr)
     {
@@ -183,14 +195,14 @@ int main(int argc, char *argv[])
     }
 
     printf("Result: %f \n", dRes);
-    cProtocol.flResult = dRes;
+    proPtr->flResult = dRes;
   }
 
   timeCounter = 0;
 
   while (timeCounter < 3)
   {
-    sentBytes = sendto(clientSocket, &cProtocol, sizeof(cProtocol), 0, ptr->ai_addr, ptr->ai_addrlen);
+    sentBytes = sendto(clientSocket, proPtr, sizeof(*proPtr), 0, ptr->ai_addr, ptr->ai_addrlen);
     if (sentBytes == -1)
     {
       perror("Answer not sent \n");
