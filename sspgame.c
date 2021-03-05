@@ -2,6 +2,9 @@
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <netdb.h>
+#include <stdlib.h>
+#include <string.h>
+#include <unistd.h>
 
 #define MAXDATA 1000
 
