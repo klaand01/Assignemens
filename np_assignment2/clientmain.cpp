@@ -125,20 +125,12 @@ int main(int argc, char *argv[])
   //Calcprotocol calculations
   operNumbr = ntohl(proPtr->arith);
 
-  printf("Oper %d\n", operNumbr);
-
-  iNumb1 = ntohl(proPtr->inValue1);
-    iNumb2 = ntohl(proPtr->inValue2);
-
-    dNumb1 = proPtr->flValue1;
-    dNumb2 = proPtr->flValue2;
+  sleep(20);
 
   if ((operNumbr >= 1) && (operNumbr <= 4))
   {
     iNumb1 = ntohl(proPtr->inValue1);
     iNumb2 = ntohl(proPtr->inValue2);
-
-
 
     switch (operNumbr)
     {
