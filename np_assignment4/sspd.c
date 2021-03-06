@@ -101,41 +101,80 @@ int main(int argc, char *argv[])
   int clientSocket, bytes;
   char buf[MAXDATA];
 
+  fd_set readFd;
+  fd_set tempFd;
+  FD_ZERO(&readFd);
+  FD_ZERO(&tempFd);
+  int newSocket, maxFd;
+  
+  FD_SET(serverSocket, &readFd);
+  maxFd = serverSocket;
+
   while (1)
   {
-    clientSocket = accept(serverSocket, (struct sockaddr *)&theirAddrs, &theirSize);
-    if (clientSocket == -1)
+    memset(&buf, 0, sizeof(buf));
+    tempFd = readFd;
+    bytes = select(maxFd + 1, &tempFd, NULL, NULL, NULL);
+    if (bytes == -1)
     {
-      perror("Client socket not accepted \n");
+      printf("Wrong with select \n");
       exit(1);
     }
 
-    char myAddress[20];
-	  const char *myAdd;
-    getsockname(clientSocket, (struct sockaddr *)&theirAddrs, &theirSize);
-    myAdd = inet_ntop(theirAddrs.sin_family, getAddrs((struct sockaddr *)&theirAddrs), myAddress, sizeof(myAddress));
-    printf("New connection from %s:%d \n", myAdd, ntohs(theirAddrs.sin_port));
-
-    bytes = send(clientSocket, "RPS TCP 1\n", sizeof("RPS TCP 1\n"), 0);
-    if (bytes == -1)
+    for (int i = 0; i <= maxFd; i++)
     {
-      perror("Message not sent \n");
-      break;
+      if (FD_ISSET(i, &tempFd))
+      {
+        if (i == serverSocket)
+        {
+          clientSocket = accept(serverSocket, (struct sockaddr *)&theirAddrs, &theirSize);
+          if (clientSocket == -1)
+          {
+            perror("Client socket not accepted \n");
+            continue;
+          }
+
+          FD_SET(clientSocket, &readFd);
+          if (clientSocket > maxFd)
+          {
+            maxFd = clientSocket;
+          }
+
+          char myAddress[20];
+	        const char *myAdd;
+          getsockname(clientSocket, (struct sockaddr *)&theirAddrs, &theirSize);
+          myAdd = inet_ntop(theirAddrs.sin_family, getAddrs((struct sockaddr *)&theirAddrs), myAddress, sizeof(myAddress));
+          printf("New connection from %s:%d \n", myAdd, ntohs(theirAddrs.sin_port));
+
+          bytes = send(clientSocket, "RPS TCP 1\n", strlen("RPS TCP 1\n"), 0);
+          if (bytes == -1)
+          {
+            perror("Message not sent \n");
+            continue;
+          }
+        }
+        else
+        {
+          bytes = recv(i, &buf, sizeof(buf), 0);
+          if (bytes == -1)
+          {
+            perror("Message not recieved \n");
+            close(i);
+            FD_CLR(i, &readFd);
+          }
+          if (bytes == 0)
+          {
+            printf("Client hung up \n");
+            close(i);
+            FD_CLR(i, &readFd);
+          }
+          else
+          {
+            printf("Client: %s", buf);
+          }
+        }
+      }
     }
-
-    char menu = "Please selec:\n1. Play\n2. Watch\n0. Exit\n";
-    bytes = send(clientSocket, &menu, sizeof(menu), 0);
-    if (bytes == -1)
-    {
-      perror("Message not sent \n");
-      break;
-    }
-
-
-
-
-
-
   }
 
   close(serverSocket);

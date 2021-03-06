@@ -96,7 +96,7 @@ int main(int argc, char *argv[])
     if (FD_ISSET(STDIN, &readfd))
     {
       fgets(buf, MAXDATA, stdin);
-
+      
       numbrBytes = send(clientSocket, buf, strlen(buf), 0);
       if (numbrBytes == -1)
       {
