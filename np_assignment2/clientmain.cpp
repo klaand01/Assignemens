@@ -125,8 +125,6 @@ int main(int argc, char *argv[])
   //Calcprotocol calculations
   operNumbr = ntohl(proPtr->arith);
 
-  sleep(20);
-
   if ((operNumbr >= 1) && (operNumbr <= 4))
   {
     iNumb1 = ntohl(proPtr->inValue1);

@@ -7,6 +7,7 @@
 #include <unistd.h>
 #include <arpa/inet.h>
 #include <netinet/in.h>
+#include <sys/time.h>
 
 #define MAXDATA 1000
 
@@ -22,12 +23,72 @@ void* getAddrs(struct sockaddr* addr)
   }
 }
 
-void playGame()
+void playGame(int maxFd, int serverSocket, int bytes, fd_set readFd, int clientSock)
 {
-  int result1, result2;
-  
-  while (result1 < 3 || result2 < 3)
+  int result1 = 0, result2 = 0, timer = 3, round = 1;
+  char gameMsg[MAXDATA], msg[MAXDATA];
+
+  while (timer > 0)
   {
+    memset(gameMsg, 0, sizeof(gameMsg));
+    sprintf(gameMsg, "Game will start in %d seconds\n", timer--);
+
+    for (int j = 0; j <= maxFd; j++)
+    {
+      if (FD_ISSET(j, &readFd) && j != serverSocket)
+      {
+        bytes = send(j, gameMsg, strlen(gameMsg), 0);
+        if (bytes == -1)
+        {
+          perror("Message not sent \n");
+          exit(1);
+        }
+      }
+    }
+        
+    sleep(1);
+  }
+
+  while (round < 4)
+  {
+    memset(gameMsg, 0, sizeof(gameMsg));
+    sprintf(gameMsg, "Round %d\n1. Rock\n2. Paper\n3. Scissor\n", round++);
+
+    for (int j = 0; j <= maxFd; j++)
+    {
+      if (FD_ISSET(j, &readFd) && j != serverSocket)
+      {
+        bytes = send(j, gameMsg, strlen(gameMsg), 0);
+        if (bytes == -1)
+        {
+          perror("Message not sent \n");
+          exit(1);
+        }
+      }
+    }
+
+    memset(msg, 0, sizeof(msg));
+    bytes = recv(clientSock, &msg, sizeof(msg), 0);
+    if (bytes == -1)
+    {
+      perror("Message not recieved \n");
+      close(clientSock);
+      FD_CLR(clientSock, &readFd);
+    }
+    if (bytes == 0)
+    {
+      printf("Client hung up \n");
+      close(clientSock);
+      FD_CLR(clientSock, &readFd);
+    }
+
+    if (strcmp(msg, "1\n"))
+    {
+      
+    }
+
+  }
+  
     
 
 
@@ -40,7 +101,8 @@ void playGame()
 
 
 
-  }
+
+  
 }
 
 int main(int argc, char *argv[])
@@ -119,8 +181,7 @@ int main(int argc, char *argv[])
   struct sockaddr_in theirAddrs;
   socklen_t theirSize = sizeof(theirAddrs);
 
-  int clientSocket, bytes;
-  int clientCounter = 0;
+  int clientSocket, bytes, players[50][2], pairCount = 0, clientCount = -1;
   char buf[MAXDATA];
 
   fd_set readFd;
@@ -198,9 +259,10 @@ int main(int argc, char *argv[])
           //If the players choose "Play"
           if (strcmp(buf, "1\n") == 0)
           {
-            clientCounter++;
+            clientCount++;
+            players[pairCount][clientCount] = i;
 
-            if (clientCounter != 2)
+            if (clientCount != 1)
             {
               bytes = send(i, "Waiting for opponent...\n", strlen("Waiting for opponent...\n"), 0);
               if (bytes == -1)
@@ -212,22 +274,24 @@ int main(int argc, char *argv[])
             {
               printf("Creating game\n");
               
-              for (int j = 0; j <= maxFd; j++)
+              for (int j = 0; j <= clientCount; j++)
               {
-                if (FD_ISSET(j, &readFd) && j != serverSocket)
+                if (FD_ISSET(players[pairCount][j], &readFd))
                 {
-                  bytes = send(j, "Game is starting\n", strlen("Game is starting\n"), 0);
+                  bytes = send(players[pairCount][j], "Game is starting\n", strlen("Game is starting\n"), 0);
                   if (bytes == -1)
                   {
                     perror("Message not sent \n");
-                  }  
+                  }
                 }
               }
-              //Bekräfta spel
-              playGame();
-            }
 
-            clientCounter % 2;
+              clientCount = -1;
+              pairCount++;
+
+              //Bekräfta spel
+              //playGame(maxFd, serverSocket, bytes, readFd, i);
+            }
           }
 
           //If the players choose "Watch"

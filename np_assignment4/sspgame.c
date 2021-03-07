@@ -115,7 +115,6 @@ int main(int argc, char *argv[])
 
       if (strcmp(buf, "Exit\n") == 0)
       {
-        //FD_CLR(clientSocket, &readfd);
         close(clientSocket);
         FD_CLR(clientSocket, &readfd);
       }
