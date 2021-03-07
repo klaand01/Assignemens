@@ -64,16 +64,6 @@ int main(int argc, char *argv[])
   }
   printf("Server: '%s' \n", buf);
 
-  if (strcmp(buf, "RPS TCP 1\n") == 0)
-  {
-    printf("Protocol supported\n");
-  }
-  else
-  {
-    printf("Protocol not supported\n");
-    close(clientSocket);
-  }
-
   fd_set readfd;
   fd_set tempfd;
   FD_ZERO(&readfd);
@@ -89,14 +79,13 @@ int main(int argc, char *argv[])
     numbrBytes = select(clientSocket + 1, &readfd, NULL, NULL, NULL);
     if (numbrBytes == -1)
     {
-      printf("Wrong with select \n");
       exit(1);
     }
 
     if (FD_ISSET(STDIN, &readfd))
     {
       fgets(buf, MAXDATA, stdin);
-      
+
       numbrBytes = send(clientSocket, buf, strlen(buf), 0);
       if (numbrBytes == -1)
       {
@@ -122,6 +111,13 @@ int main(int argc, char *argv[])
       else
       {
         printf("%s", buf);
+      }
+
+      if (strcmp(buf, "Exit\n") == 0)
+      {
+        //FD_CLR(clientSocket, &readfd);
+        close(clientSocket);
+        FD_CLR(clientSocket, &readfd);
       }
     }
   }

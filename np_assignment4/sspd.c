@@ -22,6 +22,27 @@ void* getAddrs(struct sockaddr* addr)
   }
 }
 
+void playGame()
+{
+  int result1, result2;
+  
+  while (result1 < 3 || result2 < 3)
+  {
+    
+
+
+
+
+
+
+
+
+
+
+
+  }
+}
+
 int main(int argc, char *argv[])
 {
   if (argc != 2)
@@ -99,6 +120,7 @@ int main(int argc, char *argv[])
   socklen_t theirSize = sizeof(theirAddrs);
 
   int clientSocket, bytes;
+  int clientCounter = 0;
   char buf[MAXDATA];
 
   fd_set readFd;
@@ -146,7 +168,7 @@ int main(int argc, char *argv[])
           myAdd = inet_ntop(theirAddrs.sin_family, getAddrs((struct sockaddr *)&theirAddrs), myAddress, sizeof(myAddress));
           printf("New connection from %s:%d \n", myAdd, ntohs(theirAddrs.sin_port));
 
-          bytes = send(clientSocket, "RPS TCP 1\n", strlen("RPS TCP 1\n"), 0);
+          bytes = send(clientSocket, "Please select:\n1. Play\n2. Watch\n0. Exit\n", strlen("Please select:\n1. Play\n2. Watch\n0. Exit\n"), 0);
           if (bytes == -1)
           {
             perror("Message not sent \n");
@@ -170,7 +192,59 @@ int main(int argc, char *argv[])
           }
           else
           {
-            printf("Client: %s", buf);
+            printf("Client sent: %s", buf);
+          }
+
+          //If the players choose "Play"
+          if (strcmp(buf, "1\n") == 0)
+          {
+            clientCounter++;
+
+            if (clientCounter != 2)
+            {
+              bytes = send(i, "Waiting for opponent...\n", strlen("Waiting for opponent...\n"), 0);
+              if (bytes == -1)
+              {
+                perror("Message not sent \n");
+              }
+            }
+            else
+            {
+              printf("Creating game\n");
+              
+              for (int j = 0; j <= maxFd; j++)
+              {
+                if (FD_ISSET(j, &readFd) && j != serverSocket)
+                {
+                  bytes = send(j, "Game is starting\n", strlen("Game is starting\n"), 0);
+                  if (bytes == -1)
+                  {
+                    perror("Message not sent \n");
+                  }  
+                }
+              }
+              //Bekräfta spel
+              playGame();
+            }
+
+            clientCounter % 2;
+          }
+
+          //If the players choose "Watch"
+          if (strcmp(buf, "2\n") == 0)
+          {
+            printf("Watch game\n");
+          }
+
+          //If the players choose "Exit"
+          if (strcmp(buf, "0\n") == 0)
+          {
+            bytes = send(clientSocket, "Exit\n", strlen("Exit\n"), 0);
+            if (bytes == -1)
+            {
+              perror("Message not sent \n");
+              continue;
+            }
           }
         }
       }
