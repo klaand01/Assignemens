@@ -8,6 +8,7 @@
 #include <arpa/inet.h>
 #include <netinet/in.h>
 #include <sys/time.h>
+#include <errno.h>
 
 #define MAXDATA 1000
 
@@ -23,42 +24,59 @@ void* getAddrs(struct sockaddr* addr)
   }
 }
 
-void playGame(int maxFd, int serverSocket, int bytes, fd_set readFd, int clientSock)
+void playGame(fd_set readfd, int bytes, int player1, int player2)
 {
   int result1 = 0, result2 = 0, timer = 3, round = 1;
-  char gameMsg[MAXDATA], msg[MAXDATA];
+  int players[2] = {player1, player2};
+  int nrAnswers = 0, returnValue;
+  int answers[2];
+  char gameMsg[MAXDATA], gameAnsw[10];
 
-  while (timer > 0)
+  struct timeval time;
+  time.tv_sec = 2;
+  time.tv_usec = 0;
+
+  for (int i = 0; i < 2; i++)
   {
-    memset(gameMsg, 0, sizeof(gameMsg));
-    sprintf(gameMsg, "Game will start in %d seconds\n", timer--);
-
-    for (int j = 0; j <= maxFd; j++)
+    returnValue = setsockopt(players[i], SOL_SOCKET, SO_RCVTIMEO, &time, sizeof(time));
+    if (returnValue == -1)
     {
-      if (FD_ISSET(j, &readFd) && j != serverSocket)
-      {
-        bytes = send(j, gameMsg, strlen(gameMsg), 0);
-        if (bytes == -1)
-        {
-          perror("Message not sent \n");
-          exit(1);
-        }
-      }
-    }
-        
-    sleep(1);
+      perror("Wrong with SO_RCVTIMEO \n");
+      exit(1);
+    }  
   }
 
-  while (round < 4)
+  while (result1 < 3 || result2 < 3)
   {
-    memset(gameMsg, 0, sizeof(gameMsg));
+    while (timer > 0)
+    {
+      memset(&gameMsg, 0, sizeof(gameMsg));
+      sprintf(gameMsg, "Game will start in %d seconds\n", timer--);
+
+      for (int i = 0; i < 2; i++)
+      {
+        if (FD_ISSET(players[i], &readfd))
+        {
+          bytes = send(players[i], gameMsg, strlen(gameMsg), 0);
+          if (bytes == -1)
+          {
+            perror("Message not sent \n");
+            exit(1);
+          }
+        }
+      }
+
+      sleep(1);
+    }
+
+    memset(&gameMsg, 0, sizeof(gameMsg));
     sprintf(gameMsg, "Round %d\n1. Rock\n2. Paper\n3. Scissor\n", round++);
 
-    for (int j = 0; j <= maxFd; j++)
+    for (int i = 0; i < 2; i++)
     {
-      if (FD_ISSET(j, &readFd) && j != serverSocket)
+      if (FD_ISSET(players[i], &readfd))
       {
-        bytes = send(j, gameMsg, strlen(gameMsg), 0);
+        bytes = send(players[i], gameMsg, strlen(gameMsg), 0);
         if (bytes == -1)
         {
           perror("Message not sent \n");
@@ -67,42 +85,58 @@ void playGame(int maxFd, int serverSocket, int bytes, fd_set readFd, int clientS
       }
     }
 
-    memset(msg, 0, sizeof(msg));
-    bytes = recv(clientSock, &msg, sizeof(msg), 0);
-    if (bytes == -1)
+    while (nrAnswers != 2)
     {
-      perror("Message not recieved \n");
-      close(clientSock);
-      FD_CLR(clientSock, &readFd);
-    }
-    if (bytes == 0)
-    {
-      printf("Client hung up \n");
-      close(clientSock);
-      FD_CLR(clientSock, &readFd);
-    }
-
-    if (strcmp(msg, "1\n"))
-    {
+      memset(&gameAnsw, 0, sizeof(gameAnsw));
       
+      for (int i = 0; i < 2; i++)
+      {
+        if (FD_ISSET(players[i], &readfd))
+        {
+          bytes = recv(players[i], &gameAnsw, sizeof(gameAnsw), 0);
+          if (bytes == -1)
+          {
+            if (errno == EAGAIN)
+            {
+              if (nrAnswers == 0)
+              {
+                printf("No client answered on time\n");
+                for (int j = 0; j < 2; j++)
+                {
+                  bytes = send(players[j], "You were too slow\n", strlen("You were too slow\n"), 0);
+                }
+              }
+              else if (nrAnswers == 1)
+              {
+                printf("Only 1 client answered\n");
+                bytes = send(players[i], "You were too slow\n", strlen("You were too slow\n"), 0);
+              }
+              
+              nrAnswers++;
+            }
+            else
+            {
+              perror("Message not recieved \n");
+              close(players[i]);
+              FD_CLR(players[i], &readfd);
+            }
+          }
+          if (bytes == 0)
+          {
+            printf("Client hung up \n");
+            close(players[i]);
+            FD_CLR(players[i], &readfd);
+          }
+          else
+          {
+            answers[i] = atoi(gameAnsw);
+            printf("Clint: %d\n", answers[i]);
+            nrAnswers++;
+          }
+        }
+      }
     }
-
   }
-  
-    
-
-
-
-
-
-
-
-
-
-
-
-
-  
 }
 
 int main(int argc, char *argv[])
@@ -238,6 +272,7 @@ int main(int argc, char *argv[])
         }
         else
         {
+          memset(&buf, 0, sizeof(buf));
           bytes = recv(i, &buf, sizeof(buf), 0);
           if (bytes == -1)
           {
@@ -286,11 +321,11 @@ int main(int argc, char *argv[])
                 }
               }
 
+              //Bekräfta spel
+              playGame(readFd, bytes, players[pairCount][0], players[pairCount][1]);
+
               clientCount = -1;
               pairCount++;
-
-              //Bekräfta spel
-              //playGame(maxFd, serverSocket, bytes, readFd, i);
             }
           }
 
