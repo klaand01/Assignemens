@@ -105,28 +105,28 @@ int main(int argc, char *argv[])
   char *temp;
   char arrNames[50][100], type[20];
 
-  fd_set readFd;
-  fd_set tempFd;
-  FD_ZERO(&readFd);
-  FD_ZERO(&tempFd);
-  int newSocket, maxFd;
+  fd_set readfd;
+  fd_set tempfd;
+  FD_ZERO(&readfd);
+  FD_ZERO(&tempfd);
+  int newSocket, maxfd;
   
-  FD_SET(serverSocket, &readFd);
-  maxFd = serverSocket;
+  FD_SET(serverSocket, &tempfd);
+  maxfd = serverSocket;
 
   while (1)
   {
-    tempFd = readFd;
-    sentBytes = select(maxFd + 1, &tempFd, NULL, NULL, NULL);
+    readfd = tempfd;
+    sentBytes = select(maxfd + 1, &readfd, NULL, NULL, NULL);
     if (sentBytes == -1)
     {
       printf("Wrong with select \n");
       exit(1);
     }
 
-    for (int i = 0; i <= maxFd; i++)
+    for (int i = 0; i <= maxfd; i++)
     {
-      if (FD_ISSET(i, &tempFd))
+      if (FD_ISSET(i, &readfd))
       {
         if (i == serverSocket)
         {
@@ -137,10 +137,10 @@ int main(int argc, char *argv[])
             continue;
           }
 
-          FD_SET(clientSocket, &readFd);
-          if (clientSocket > maxFd)
+          FD_SET(clientSocket, &tempfd);
+          if (clientSocket > maxfd)
           {
-            maxFd = clientSocket;
+            maxfd = clientSocket;
           }
 
           char myAddress[20];
@@ -164,13 +164,13 @@ int main(int argc, char *argv[])
           {
             perror("Message not recieved \n");
             close(i);
-            FD_CLR(i, &readFd);
+            FD_CLR(i, &readfd);
           }
           if (recvBytes == 0)
           {
             printf("Client hung up \n");
             close(i);
-            FD_CLR(i, &readFd);
+            FD_CLR(i, &readfd);
           }
           else
           {
@@ -228,9 +228,9 @@ int main(int argc, char *argv[])
             temp = strchr(buf, ' ');
             sprintf(msg, "%s: %s", arrNames[i], temp);
 
-            for (int j = 0; j <= maxFd; j++)
+            for (int j = 0; j <= maxfd; j++)
             {
-              if (FD_ISSET(j, &readFd))
+              if (FD_ISSET(j, &readfd))
               {
                 if (j != serverSocket)
                 {
