@@ -30,7 +30,7 @@ int main(int argc, char *argv[])
   char *name = argv[2];
 
   //Checking nickname
-  char *expression="^[A-Za-z_]+$";
+  char *expression="^[A-Za-z0-9_]+$";
   regex_t regex;
   int ret;
   

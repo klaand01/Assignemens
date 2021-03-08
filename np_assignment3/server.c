@@ -23,7 +23,6 @@ void* getAddrs(struct sockaddr* addr)
   }
 }
 
-
 int main(int argc, char *argv[])
 {
   /* Do more magic */
@@ -102,10 +101,9 @@ int main(int argc, char *argv[])
   socklen_t theirSize = sizeof(theirAddrs);
 
   int clientSocket, sentBytes, recvBytes;
-  char buf[MAXDATA];
-  char msg[MAXDATA];
-  char arrNames[50][100];
-  char type[20];
+  char buf[MAXDATA], msg[MAXDATA];
+  char *temp;
+  char arrNames[50][100], type[20];
 
   fd_set readFd;
   fd_set tempFd;
@@ -160,6 +158,7 @@ int main(int argc, char *argv[])
         }
         else
         {
+          memset(&buf, 0, sizeof(buf));
           recvBytes = recv(i, &buf, sizeof(buf), 0);
           if (recvBytes == -1)
           {
@@ -183,7 +182,7 @@ int main(int argc, char *argv[])
             sscanf(buf, "%s %s", type, arrNames[i]);
 
             //Checking nickname, to have this in a function didn't work
-            char *expression = "^[A-Za-z_]+$";
+            char *expression = "^[A-Za-z0-9_]+$";
             regex_t regex;
             int ret;
 
@@ -226,12 +225,14 @@ int main(int argc, char *argv[])
 
           if (strcmp(type, "MSG") == 0)
           {
-            sprintf(msg, "%s: %s", arrNames[i], buf);
+            temp = strchr(buf, ' ');
+            sprintf(msg, "%s: %s", arrNames[i], temp);
+
             for (int j = 0; j <= maxFd; j++)
             {
               if (FD_ISSET(j, &readFd))
               {
-                if (j != serverSocket && j != i)
+                if (j != serverSocket)
                 {
                   sentBytes = send(j, msg, strlen(msg), 0);
                   if (sentBytes == -1)
