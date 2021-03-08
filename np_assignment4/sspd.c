@@ -24,9 +24,11 @@ void* getAddrs(struct sockaddr* addr)
   }
 }
 
+int score1 = 0, score2 = 0;
+
 void playGame(fd_set bigReadfd, int bytes, int player1, int player2)
 {
-  int score1 = 0, score2 = 0, timer = 3, round = 1;
+  int timer = 3, round = 1;
   int players[2] = {player1, player2};
   int nrAnswers = 0, returnValue, selectBytes;
   int answers[2];
@@ -50,8 +52,11 @@ void playGame(fd_set bigReadfd, int bytes, int player1, int player2)
     maxfd = player2;
   }
 
-  while (score1 < 3 || score2 < 3)
+  while (score1 < 3 && score2 < 3)
   {
+    timer = 3;
+    nrAnswers = 0;
+
     while (timer > 0)
     {
       memset(&gameMsg, 0, sizeof(gameMsg));
@@ -99,70 +104,125 @@ void playGame(fd_set bigReadfd, int bytes, int player1, int player2)
         printf("Wrong with select \n");
         exit(1);
       }
-      
-      if (FD_ISSET(players[0], &readfd))
-      {
-        bytes = recv(players[0], &gameAnsw, sizeof(gameAnsw), 0);
-        if (bytes == -1)
-        {
-          perror("Message not recieved \n");
-          close(players[0]);
-          FD_CLR(players[0], &readfd);
-        }
-        else
-        {
-          answers[0] = atoi(gameAnsw);
-          printf("Clint: %d\n", answers[0]);
-          nrAnswers++;
-        }
-      }
 
-      if (FD_ISSET(players[1], &readfd))
+      for (int i = 0; i < 2; i++)
       {
-        bytes = recv(players[1], &gameAnsw, sizeof(gameAnsw), 0);
-        if (bytes == -1)
+        if (FD_ISSET(players[i], &readfd))
         {
-          perror("Message not recieved \n");
-          close(players[1]);
-          FD_CLR(players[1], &readfd);
-        }
-        else
-        {
-          answers[1] = atoi(gameAnsw);
-          printf("Clint: %d\n", answers[1]);
-          nrAnswers++;
-        }
-      }
-      
-      if (selectBytes == 0)
-      {
-        if (nrAnswers == 0)
-        {
-          printf("No client answered\n");
+          bytes = recv(players[i], &gameAnsw, sizeof(gameAnsw), 0);
+          if (bytes == -1)
+          {
+            perror("Message not recieved \n");
+            close(players[i]);
+            FD_CLR(players[i], &readfd);
+          }
+          else
+          {
+            answers[i] = atoi(gameAnsw);
+            printf("Clint: %d\n", answers[i]);
+            nrAnswers++;
+          }
         }
 
-        if (nrAnswers == 1)
+        if (selectBytes == 0)
         {
-          printf("Only one client answered\n");
-        }
+          if (nrAnswers == 0)
+          {
+            for (int j = 0; j < 2; j++)
+            {
+              bytes = send(players[j], "No player selected\n", strlen("No player selected\n"), 0);
+            }
+          }
 
-        nrAnswers = 2;
+          if (nrAnswers == 1)
+          {
+            if (answers[0] != 1 && answers[0] != 2 && answers[0] != 3)
+            {
+              bytes = send(players[0], "Too slow, automatic loss\n", strlen("Too slow, automatic loss\n"), 0);
+            }
+            else
+            {
+              bytes = send(players[1], "Too slow, automatic loss\n", strlen("Too slow, automatic loss\n"), 0);
+            }
+          }
+
+          nrAnswers = 2;
+        }
       }
     }
 
-    printf("Done\n");
-    exit(1);
+    checkWhoWon(answers[0], answers[1], bytes, players, nrAnswers);
   }
+  printf("3 rounds done!\n");
+  exit(1);
 }
 
-void checkWhoWon(int player1Answ, int player2Answ, int score1, int score2, int bytes, int players[])
+void checkWhoWon(int player1Answ, int player2Answ, int bytes, int players[], int nrAnswers)
 {
+  char scores[MAXDATA];
+  memset(&scores, 0, sizeof(scores));
+
   if (player1Answ == player2Answ)
   {
     for (int i = 0; i < 2; i++)
     {
       bytes = send(players[i], "Draw\n", strlen("Draw\n"), 0);
     }
+  }
+
+  if (nrAnswers == 1)
+  {
+    if (player1Answ == 1 || player1Answ == 2 || player1Answ == 3)
+    {
+      score1++;
+      bytes = send(players[0], "You won!\n", strlen("You won!\n"), 0);
+      bytes = send(players[1], "You lost\n", strlen("You lost\n"), 0);
+    }
+    else
+    {
+      score2++;
+      bytes = send(players[0], "You lost\n", strlen("You lost\n"), 0);
+      bytes = send(players[1], "You won!\n", strlen("You won!\n"), 0);
+    }
+  }
+
+  if (abs(player1Answ - player2Answ) == 2)
+  {
+    if (player1Answ < player2Answ)
+    {
+      score1++;
+      bytes = send(players[0], "You won!\n", strlen("You won!\n"), 0);
+      bytes = send(players[1], "You lost\n", strlen("You lost\n"), 0);
+    }
+    else
+    {
+      score2++;
+      bytes = send(players[0], "You lost\n", strlen("You lost\n"), 0);
+      bytes = send(players[1], "You won!\n", strlen("You won!\n"), 0);
+    }
+  }
+
+  if (abs(player1Answ - player2Answ) == 1)
+  {
+    if (player1Answ > player2Answ)
+    {
+      score1++;
+      bytes = send(players[0], "You won!\n", strlen("You won!\n"), 0);
+      bytes = send(players[1], "You lost\n", strlen("You lost\n"), 0);
+    }
+    else
+    {
+      score2++;
+      bytes = send(players[0], "You lost\n", strlen("You lost\n"), 0);
+      bytes = send(players[1], "You won!\n", strlen("You won!\n"), 0);
+    }
+  }
+
+  sprintf(scores, "Scores player 1: %d\nScore player 2: %d\n\n", score1, score2);
+
+  for (int i = 0; i < 2; i++)
+  {
+    bytes = send(players[i], scores, strlen(scores), 0);
   }
 }
 
