@@ -34,10 +34,6 @@ void playGame(fd_set bigReadfd, int bytes, int player1, int player2)
   int answers[2];
   char gameMsg[MAXDATA], gameAnsw[10];
 
-  struct timeval time;
-  time.tv_sec = 10;
-  time.tv_usec = 0;
-
   fd_set readfd;
   fd_set tempfd;
   FD_ZERO(&readfd);
@@ -93,6 +89,10 @@ void playGame(fd_set bigReadfd, int bytes, int player1, int player2)
         }
       }
     }
+
+    struct timeval time;
+    time.tv_sec = 10;
+    time.tv_usec = 0;
 
     while (nrAnswers != 2)
     {
@@ -303,6 +303,7 @@ int main(int argc, char *argv[])
   socklen_t theirSize = sizeof(theirAddrs);
 
   int clientSocket, bytes, players[50][2], pairCount = 0, clientCount = -1;
+  int nrAnswers = 0;
   char buf[MAXDATA];
 
   fd_set readfd;
@@ -400,7 +401,7 @@ int main(int argc, char *argv[])
               {
                 if (FD_ISSET(players[pairCount][j], &readfd))
                 {
-                  bytes = send(players[pairCount][j], "Game is starting\n", strlen("Game is starting\n"), 0);
+                  bytes = send(players[pairCount][j], "Press Enter to start game!\n", strlen("Press Enter to start game!\n"), 0);
                   if (bytes == -1)
                   {
                     perror("Message not sent \n");
@@ -408,7 +409,26 @@ int main(int argc, char *argv[])
                 }
               }
 
-              //Bekräfta spel
+              memset(&buf, 0, sizeof(buf));
+              while (nrAnswers != 2)
+              {
+                for (int j = 0; j <= clientCount; j++)
+                {
+                  if (FD_ISSET(players[pairCount][j], &readfd))
+                  {
+                    bytes = recv(players[pairCount][j], &buf, sizeof(buf), 0);
+                    if (bytes == -1)
+                    {
+                      perror("Message not recieved \n");
+                    }
+                    else
+                    {
+                      nrAnswers++;
+                    }
+                  }
+                }
+              }
+              
               playGame(readfd, bytes, players[pairCount][0], players[pairCount][1]);
 
               clientCount = -1;
