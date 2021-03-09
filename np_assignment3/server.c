@@ -109,7 +109,7 @@ int main(int argc, char *argv[])
   fd_set tempfd;
   FD_ZERO(&readfd);
   FD_ZERO(&tempfd);
-  int newSocket, maxfd;
+  int maxfd;
   
   FD_SET(serverSocket, &tempfd);
   maxfd = serverSocket;

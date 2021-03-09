@@ -9,6 +9,7 @@
 #include <netinet/in.h>
 #include <sys/time.h>
 #include <errno.h>
+#include <time.h>
 
 #define MAXDATA 1000
 
@@ -24,15 +25,30 @@ void* getAddrs(struct sockaddr* addr)
   }
 }
 
-int score1 = 0, score2 = 0;
+void menu(int bytes, int clientsocket)
+{
+  bytes = send(clientsocket, "MENU\n", strlen("MENU\n"), 0);
+  if (bytes == -1)
+  {
+    perror("Message not sent \n");
+  }
+}
+
+int score1 = 0, score2 = 0, round = 0;
 
 void playGame(fd_set bigReadfd, int bytes, int player1, int player2)
 {
-  int timer = 3, round = 1;
+  int timer = 3;
   int players[2] = {player1, player2};
   int nrAnswers = 0, returnValue, selectBytes;
   int answers[2];
   char gameMsg[MAXDATA], gameAnsw[10];
+
+  clock_t startTime, endTime;
+
+  score1 = 0;
+  score2 = 0;
+  round = 0;
 
   fd_set readfd;
   fd_set tempfd;
@@ -50,32 +66,50 @@ void playGame(fd_set bigReadfd, int bytes, int player1, int player2)
 
   while (score1 < 3 && score2 < 3)
   {
-    timer = 3;
-    nrAnswers = 0;
-
-    while (timer > 0)
+    if (score1 < 3 && score2 < 3 && round == 3)
     {
-      memset(&gameMsg, 0, sizeof(gameMsg));
-      sprintf(gameMsg, "Game will start in %d seconds\n", timer--);
+      round = 0;
+      score1 = 0;
+      score2 = 0;
 
       for (int i = 0; i < 2; i++)
       {
-        if (FD_ISSET(players[i], &bigReadfd))
+        bytes = send(players[i], "No player has won, game will start over\n", strlen("No player has won, game will start over\n"), 0);
+      }
+    }
+
+    timer = 3;
+    nrAnswers = 0;
+    round++;
+
+    while (timer > 0)
+    {
+      time_t compTime = time(NULL);
+
+      if ((time(NULL) - compTime) == 1)
+      {
+        memset(&gameMsg, 0, sizeof(gameMsg));
+        sprintf(gameMsg, "Game will start in %d seconds\n", timer);
+
+        for (int i = 0; i < 2; i++)
         {
-          bytes = send(players[i], gameMsg, strlen(gameMsg), 0);
-          if (bytes == -1)
+          if (FD_ISSET(players[i], &bigReadfd))
           {
-            perror("Message not sent \n");
-            exit(1);
+            bytes = send(players[i], gameMsg, strlen(gameMsg), 0);
+            if (bytes == -1)
+            {
+              perror("Message not sent \n");
+              exit(1);
+            }
           }
         }
-      }
 
-      sleep(1);
+        timer--;
+      }
     }
 
     memset(&gameMsg, 0, sizeof(gameMsg));
-    sprintf(gameMsg, "Round %d\n1. Rock\n2. Paper\n3. Scissor\n", round++);
+    sprintf(gameMsg, "\nRound %d\n1. Rock\n2. Paper\n3. Scissor\n", round);
 
     for (int i = 0; i < 2; i++)
     {
@@ -153,8 +187,13 @@ void playGame(fd_set bigReadfd, int bytes, int player1, int player2)
 
     checkWhoWon(answers[0], answers[1], bytes, players, nrAnswers);
   }
-  printf("3 rounds done!\n");
-  exit(1);
+
+  printf("Game finished!\n");
+
+  for (int i = 0; i < 2; i++)
+  {
+    menu(bytes, players[i]);
+  }
 }
 
 void checkWhoWon(int player1Answ, int player2Answ, int bytes, int players[], int nrAnswers)
@@ -166,8 +205,9 @@ void checkWhoWon(int player1Answ, int player2Answ, int bytes, int players[], int
   {
     for (int i = 0; i < 2; i++)
     {
-      bytes = send(players[i], "Draw\n", strlen("Draw\n"), 0);
+      bytes = send(players[i], "\nDraw, round starts over\n", strlen("\nDraw, round starts over\n"), 0);
     }
+    round--;
   }
 
   if (nrAnswers == 1)
@@ -175,14 +215,14 @@ void checkWhoWon(int player1Answ, int player2Answ, int bytes, int players[], int
     if (player1Answ == 1 || player1Answ == 2 || player1Answ == 3)
     {
       score1++;
-      bytes = send(players[0], "You won!\n", strlen("You won!\n"), 0);
-      bytes = send(players[1], "You lost\n", strlen("You lost\n"), 0);
+      bytes = send(players[0], "\nYou won!\n", strlen("\nYou won!\n"), 0);
+      bytes = send(players[1], "\nYou lost\n", strlen("\nYou lost\n"), 0);
     }
     else
     {
       score2++;
-      bytes = send(players[0], "You lost\n", strlen("You lost\n"), 0);
-      bytes = send(players[1], "You won!\n", strlen("You won!\n"), 0);
+      bytes = send(players[0], "\nYou lost\n", strlen("\nYou lost\n"), 0);
+      bytes = send(players[1], "\nYou won!\n", strlen("\nYou won!\n"), 0);
     }
   }
 
@@ -191,14 +231,14 @@ void checkWhoWon(int player1Answ, int player2Answ, int bytes, int players[], int
     if (player1Answ < player2Answ)
     {
       score1++;
-      bytes = send(players[0], "You won!\n", strlen("You won!\n"), 0);
-      bytes = send(players[1], "You lost\n", strlen("You lost\n"), 0);
+      bytes = send(players[0], "\nYou won!\n", strlen("\nYou won!\n"), 0);
+      bytes = send(players[1], "\nYou lost\n", strlen("\nYou lost\n"), 0);
     }
     else
     {
       score2++;
-      bytes = send(players[0], "You lost\n", strlen("You lost\n"), 0);
-      bytes = send(players[1], "You won!\n", strlen("You won!\n"), 0);
+      bytes = send(players[0], "\nYou lost\n", strlen("\nYou lost\n"), 0);
+      bytes = send(players[1], "\nYou won!\n", strlen("\nYou won!\n"), 0);
     }
   }
 
@@ -207,14 +247,14 @@ void checkWhoWon(int player1Answ, int player2Answ, int bytes, int players[], int
     if (player1Answ > player2Answ)
     {
       score1++;
-      bytes = send(players[0], "You won!\n", strlen("You won!\n"), 0);
-      bytes = send(players[1], "You lost\n", strlen("You lost\n"), 0);
+      bytes = send(players[0], "\nYou won!\n", strlen("\nYou won!\n"), 0);
+      bytes = send(players[1], "\nYou lost\n", strlen("\nYou lost\n"), 0);
     }
     else
     {
       score2++;
-      bytes = send(players[0], "You lost\n", strlen("You lost\n"), 0);
-      bytes = send(players[1], "You won!\n", strlen("You won!\n"), 0);
+      bytes = send(players[0], "\nYou lost\n", strlen("\nYou lost\n"), 0);
+      bytes = send(players[1], "\nYou won!\n", strlen("\nYou won!\n"), 0);
     }
   }
 
@@ -302,9 +342,9 @@ int main(int argc, char *argv[])
   struct sockaddr_in theirAddrs;
   socklen_t theirSize = sizeof(theirAddrs);
 
-  int clientSocket, bytes, players[50][2], pairCount = 0, clientCount = -1;
-  int nrAnswers = 0;
-  char buf[MAXDATA];
+  int clientSocket, bytes, players[50][2], clientCount = -1, pairCount = -1;
+  int nrAnswers = 0, menuNr;
+  char buf[MAXDATA], command[20], number[10];
 
   fd_set readfd;
   fd_set tempfd;
@@ -312,14 +352,14 @@ int main(int argc, char *argv[])
   FD_ZERO(&tempfd);
   int newSocket, maxfd;
   
-  FD_SET(serverSocket, &readfd);
+  FD_SET(serverSocket, &tempfd);
   maxfd = serverSocket;
 
   while (1)
   {
     memset(&buf, 0, sizeof(buf));
-    tempfd = readfd;
-    bytes = select(maxfd + 1, &tempfd, NULL, NULL, NULL);
+    readfd = tempfd;
+    bytes = select(maxfd + 1, &readfd, NULL, NULL, NULL);
     if (bytes == -1)
     {
       printf("Wrong with select \n");
@@ -328,7 +368,7 @@ int main(int argc, char *argv[])
 
     for (int i = 0; i <= maxfd; i++)
     {
-      if (FD_ISSET(i, &tempfd))
+      if (FD_ISSET(i, &readfd))
       {
         if (i == serverSocket)
         {
@@ -339,7 +379,7 @@ int main(int argc, char *argv[])
             continue;
           }
 
-          FD_SET(clientSocket, &readfd);
+          FD_SET(clientSocket, &tempfd);
           if (clientSocket > maxfd)
           {
             maxfd = clientSocket;
@@ -351,12 +391,7 @@ int main(int argc, char *argv[])
           myAdd = inet_ntop(theirAddrs.sin_family, getAddrs((struct sockaddr *)&theirAddrs), myAddress, sizeof(myAddress));
           printf("New connection from %s:%d \n", myAdd, ntohs(theirAddrs.sin_port));
 
-          bytes = send(clientSocket, "Please select:\n1. Play\n2. Watch\n0. Exit\n", strlen("Please select:\n1. Play\n2. Watch\n0. Exit\n"), 0);
-          if (bytes == -1)
-          {
-            perror("Message not sent \n");
-            continue;
-          }
+          menu(bytes, clientSocket);
         }
         else
         {
@@ -366,91 +401,79 @@ int main(int argc, char *argv[])
           {
             perror("Message not recieved \n");
             close(i);
-            FD_CLR(i, &readfd);
+            FD_CLR(i, &tempfd);
           }
           if (bytes == 0)
           {
             printf("Client hung up \n");
             close(i);
-            FD_CLR(i, &readfd);
+            FD_CLR(i, &tempfd);
           }
           else
           {
             printf("Client sent: %s", buf);
+            sscanf(buf, "%s %s", command, number);
           }
 
-          //If the players choose "Play"
-          if (strcmp(buf, "1\n") == 0)
+          //Menu
+          if (strcmp(command, "MENU") == 0)
           {
-            clientCount++;
-            players[pairCount][clientCount] = i;
-
-            if (clientCount != 1)
+            //Client chose "Play"
+            if (strcmp(number, "1") == 0)
             {
-              bytes = send(i, "Waiting for opponent...\n", strlen("Waiting for opponent...\n"), 0);
-              if (bytes == -1)
+              clientCount++;
+              if (clientCount == 0)
               {
-                perror("Message not sent \n");
+                pairCount++;
               }
-            }
-            else
-            {
-              printf("Creating game\n");
-              
-              for (int j = 0; j <= clientCount; j++)
+
+              players[pairCount][clientCount] = i;
+              if (clientCount != 1)
               {
-                if (FD_ISSET(players[pairCount][j], &readfd))
+                bytes = send(i, "Waiting for opponent...\n", strlen("Waiting for opponent...\n"), 0);
+                if (bytes == -1)
                 {
-                  bytes = send(players[pairCount][j], "Press Enter to start game!\n", strlen("Press Enter to start game!\n"), 0);
+                  perror("Message not sent \n");
+                }
+              }
+              else
+              {
+                printf("Starting game\n");
+              
+                for (int j = 0; j <= clientCount; j++)
+                {
+                  bytes = send(players[pairCount][j], "GAME\n", strlen("GAME\n"), 0);
                   if (bytes == -1)
                   {
                     perror("Message not sent \n");
                   }
                 }
               }
-
-              memset(&buf, 0, sizeof(buf));
-              while (nrAnswers != 2)
-              {
-                for (int j = 0; j <= clientCount; j++)
-                {
-                  if (FD_ISSET(players[pairCount][j], &readfd))
-                  {
-                    bytes = recv(players[pairCount][j], &buf, sizeof(buf), 0);
-                    if (bytes == -1)
-                    {
-                      perror("Message not recieved \n");
-                    }
-                    else
-                    {
-                      nrAnswers++;
-                    }
-                  }
-                }
-              }
-              
-              playGame(readfd, bytes, players[pairCount][0], players[pairCount][1]);
-
-              clientCount = -1;
-              pairCount++;
             }
-          }
 
-          //If the players choose "Watch"
-          if (strcmp(buf, "2\n") == 0)
-          {
-            printf("Watch game\n");
-          }
-
-          //If the players choose "Exit"
-          if (strcmp(buf, "0\n") == 0)
-          {
-            bytes = send(clientSocket, "Exit\n", strlen("Exit\n"), 0);
-            if (bytes == -1)
+            //Client chose "Watch"
+            if (strcmp(number, "2") == 0)
             {
-              perror("Message not sent \n");
-              continue;
+              printf("Watch game\n");
             }
+          }
+
+          //Game
+          if (strcmp(command, "GAME") == 0)
+          {
+            if (nrAnswers != 2)
+            {
+              nrAnswers++;
+            }
+            else
+            {
+              playGame(readfd, bytes, players[pairCount][0], players[pairCount][1]);
+              
+              clientCount = -1;
+              pairCount--;
+              nrAnswers = 0;
+            }
+            printf("NrAnswers %d\n", nrAnswers);
           }
         }
       }

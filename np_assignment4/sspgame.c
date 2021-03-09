@@ -32,7 +32,7 @@ int main(int argc, char *argv[])
   addrs.ai_flags = AI_PASSIVE;
 
   int clientSocket, returnValue, numbrBytes;
-  char buf[MAXDATA];
+  char buf[MAXDATA], msg[MAXDATA], command[20];
 
   returnValue = getaddrinfo(argv[1], Destport, &addrs, &ptr);
   if (returnValue != 0)
@@ -55,14 +55,6 @@ int main(int argc, char *argv[])
     close(clientSocket);
   }
   printf("Client connected \n");
-  
-  numbrBytes = recv(clientSocket, &buf, sizeof(buf), 0);
-  if (numbrBytes == -1)
-  {
-    perror("Wrong with message \n");
-    close(clientSocket);
-  }
-  printf("Server: '%s' \n", buf);
 
   fd_set readfd;
   fd_set tempfd;
@@ -74,7 +66,6 @@ int main(int argc, char *argv[])
   while(1)
   {
     readfd = tempfd;
-    memset(&buf, 0, sizeof(buf)); 
 
     numbrBytes = select(clientSocket + 1, &readfd, NULL, NULL, NULL);
     if (numbrBytes == -1)
@@ -84,18 +75,31 @@ int main(int argc, char *argv[])
 
     if (FD_ISSET(STDIN, &readfd))
     {
+      memset(&buf, 0, sizeof(buf));
+      memset(&msg, 0, sizeof(msg));
+      
       fgets(buf, MAXDATA, stdin);
 
-      numbrBytes = send(clientSocket, buf, strlen(buf), 0);
+      if (strcmp(command, "MENU") == 0)
+      {
+        sprintf(msg, "MENU %s", buf);
+      }
+
+      if (strcmp(command, "GAME") == 0)
+      {
+        sprintf(msg, "GAME %s", buf);
+      }
+
+      numbrBytes = send(clientSocket, msg, strlen(msg), 0);
       if (numbrBytes == -1)
       {
-        perror("Send not gone through \n");
-        exit(1);
+        perror("Wrong with menu send\n");
       }
     }
 
     if (FD_ISSET(clientSocket, &readfd))
     {
+      memset(&buf, 0, sizeof(buf));
       numbrBytes = recv(clientSocket, &buf, sizeof(buf), 0);
       if (numbrBytes == -1)
       {
@@ -111,14 +115,21 @@ int main(int argc, char *argv[])
       else
       {
         printf("%s", buf);
-      }
+        sscanf(buf, "%s", command);
 
-      if (strcmp(buf, "Exit\n") == 0)
-      {
-        close(clientSocket);
-        FD_CLR(clientSocket, &readfd);
+        if (strcmp(command, "MENU") == 0)
+        {
+          printf("Please select:\n1. Play\n2. Watch\n0. Exit\n");
+        }
+
+        if (strcmp(command, "GAME") == 0)
+        {
+          printf("Press Enter to start game!\n");
+        }
       }
     }
+
+    fflush(stdin);
   }
 
   close(clientSocket);
