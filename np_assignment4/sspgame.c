@@ -77,17 +77,23 @@ int main(int argc, char *argv[])
     {
       memset(&buf, 0, sizeof(buf));
       memset(&msg, 0, sizeof(msg));
-      
-      fgets(buf, MAXDATA, stdin);
+      scanf("%s", buf);
+      printf("Command %s buf %s\n", command, buf);
+
+      if (strcmp(buf, "0\n") == 0)
+      {
+        close(clientSocket);
+        FD_CLR(clientSocket, &readfd);
+      }
 
       if (strcmp(command, "MENU") == 0)
       {
-        sprintf(msg, "MENU %s", buf);
+        sprintf(msg, "MENU %s\n", buf);
       }
 
       if (strcmp(command, "GAME") == 0)
       {
-        sprintf(msg, "GAME %s", buf);
+        sprintf(msg, "GAME %s\n", buf);
       }
 
       numbrBytes = send(clientSocket, msg, strlen(msg), 0);
@@ -114,22 +120,27 @@ int main(int argc, char *argv[])
       }
       else
       {
-        printf("%s", buf);
         sscanf(buf, "%s", command);
+        printf("REAL command %s\n", command);
+      }
 
-        if (strcmp(command, "MENU") == 0)
-        {
-          printf("Please select:\n1. Play\n2. Watch\n0. Exit\n");
-        }
+      if (strcmp(command, "MSG") == 0)
+      {
+        printf("%s\n", buf);
+      }
 
-        if (strcmp(command, "GAME") == 0)
-        {
-          printf("Press Enter to start game!\n");
-        }
+      if (strcmp(command, "MENU") == 0)
+      {
+        printf("1. Play\n2. Watch\n0. Exit\n");
+      }
+
+      if (strcmp(command, "GAME") == 0)
+      {
+        printf("%s\n", buf);
       }
     }
 
-    fflush(stdin);
+    //fflush(stdin);
   }
 
   close(clientSocket);
