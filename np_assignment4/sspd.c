@@ -8,7 +8,6 @@
 #include <arpa/inet.h>
 #include <netinet/in.h>
 #include <sys/time.h>
-#include <time.h>
 
 #define MAXDATA 1000
 
@@ -40,28 +39,15 @@ void checkWhoWon(int player1Answ, int player2Answ, int bytes, int players[], int
   char scores[MAXDATA];
   memset(&scores, 0, sizeof(scores));
 
-  if (player1Answ == player2Answ)
-  {
-    for (int i = 0; i < 2; i++)
-    {
-      bytes = send(players[i], "RESULT \nDraw, round starts over\n", strlen("RESULT \nDraw, round starts over\n"), 0);
-    }
-    round--;
-  }
-
   if (nrAnswers == 1)
   {
     if (player1Answ == 1 || player1Answ == 2 || player1Answ == 3)
     {
       score1++;
-      bytes = send(players[0], "RESULT \nYou won!\n", strlen("RESULT \nYou won!\n"), 0);
-      bytes = send(players[1], "RESULT \nYou lost\n", strlen("RESULT \nYou lost\n"), 0);
     }
     else
     {
       score2++;
-      bytes = send(players[0], "RESULT \nYou lost\n", strlen("RESULT \nYou lost\n"), 0);
-      bytes = send(players[1], "RESULT \nYou won!\n", strlen("RESULT \nYou won!\n"), 0);
     }
   }
 
@@ -70,14 +56,10 @@ void checkWhoWon(int player1Answ, int player2Answ, int bytes, int players[], int
     if (player1Answ < player2Answ)
     {
       score1++;
-      bytes = send(players[0], "RESULT \nYou won!\n", strlen("RESULT \nYou won!\n"), 0);
-      bytes = send(players[1], "RESULT \nYou lost\n", strlen("RESULT \nYou lost\n"), 0);
     }
     else
     {
       score2++;
-      bytes = send(players[0], "RESULT \nYou lost\n", strlen("RESULT \nYou lost\n"), 0);
-      bytes = send(players[1], "RESULT \nYou won!\n", strlen("RESULT \nYou won!\n"), 0);
     }
   }
 
@@ -86,18 +68,34 @@ void checkWhoWon(int player1Answ, int player2Answ, int bytes, int players[], int
     if (player1Answ > player2Answ)
     {
       score1++;
-      bytes = send(players[0], "RESULT \nYou won!\n", strlen("RESULT \nYou won!\n"), 0);
-      bytes = send(players[1], "RESULT \nYou lost\n", strlen("RESULT \nYou lost\n"), 0);
     }
     else
     {
       score2++;
-      bytes = send(players[0], "RESULT \nYou lost\n", strlen("RESULT \nYou lost\n"), 0);
-      bytes = send(players[1], "RESULT \nYou won!\n", strlen("RESULT \nYou won!\n"), 0);
     }
   }
 
-  sprintf(scores, "RESULT Scores player 1: %d\nScore player 2: %d\n\n", score1, score2);
+  if (player1Answ == player2Answ)
+  {
+    sprintf(scores, "RESULT \nDraw, round starts over\n");
+    round--;
+  }
+
+  if (round == 3 && (score1 == 3 || score2 == 3))
+  {
+    sprintf(scores, "MENU Game finished!\n");
+    round = 0;
+  }
+  
+  else if (round == 3 && score1 < 3 && score2 < 3)
+  {
+    sprintf(scores, "START Match draw, game starting over\n");
+    round = 0;
+  }
+  else
+  {
+    sprintf(scores, "RESULT Scores player 1: %d\nScore player 2: %d\n\n", score1, score2);
+  }
 
   for (int i = 0; i < 2; i++)
   {
@@ -193,12 +191,10 @@ int main(int argc, char *argv[])
   FD_SET(serverSocket, &tempfd);
   maxfd = serverSocket;
 
-  int timer = 3;
+  int secondsToGame = 3, games = 0;
   int nrAnswers = 0;
   int answers[2];
   char gameMsg[MAXDATA];
-
-  clock_t startTime, endTime;
 
   while (1)
   {
@@ -267,10 +263,13 @@ int main(int argc, char *argv[])
             if (strcmp(input, "1") == 0)
             {
               clientCount++;
+              clientCount %= 2;
+
               if (clientCount == 0)
               {
                 pairCount++;
               }
+              printf("PairCOUNt %d\n", pairCount);
 
               players[pairCount][clientCount] = i;
 
@@ -285,10 +284,12 @@ int main(int argc, char *argv[])
               else
               {
                 printf("Starting game\n");
+                gamePlayers[0] = players[pairCount][0];
+                gamePlayers[1] = players[pairCount][1];
+                games++;
 
-                for (int j = 0; j <= clientCount; j++)
+                for (int j = 0; j < 2; j++)
                 {
-                  gamePlayers[j] = players[pairCount][j];
                   bytes = send(gamePlayers[j], "START Press 'R' to start!\n", strlen("START Press 'R' to start!\n"), 0);
                   if (bytes == -1)
                   {
@@ -303,15 +304,13 @@ int main(int argc, char *argv[])
             //Client chose "Watch"
             if (strcmp(input, "2") == 0)
             {
-              printf("Watch game\n");
+              printf("Watch Game\n");              
             }
           }
 
           //Start of game
           if (strcmp(command, "START") == 0)
           {
-            
-
             if (nrAnswers != 2)
             {
               nrAnswers++;
@@ -320,15 +319,17 @@ int main(int argc, char *argv[])
             //Fixa att båda måste trycka Enter, inte bara 1 två gånger
             if (nrAnswers == 2)
             {
-              timer = 3;
+              secondsToGame = 3;
+              struct timeval startTime, compTime;
 
-              while (timer > 0)
+              while (secondsToGame > -1)
               {
-                time_t compTime = time(NULL);
-                if ((time(NULL) - 1) == compTime)
+                gettimeofday(&compTime, NULL);
+
+                if ((compTime.tv_sec - startTime.tv_sec) >= 1)
                 {
                   memset(&gameMsg, 0, sizeof(gameMsg));
-                  sprintf(gameMsg, "GAME Game will start in %d seconds\n", timer);
+                  sprintf(gameMsg, "GAME Game will start in %d seconds\n", secondsToGame);
 
                   for (int j = 0; j < 2; j++)
                   {
@@ -340,10 +341,11 @@ int main(int argc, char *argv[])
                     }
                   }
 
-                  timer--;
+                  gettimeofday(&startTime, NULL);
+                  secondsToGame--;
                 }
               }
-
+              
               memset(&gameMsg, 0, sizeof(gameMsg));
               sprintf(gameMsg, "GAME \nRound %d\n1. Rock\n2. Paper\n3. Scissor\n", ++round);
 
@@ -359,19 +361,17 @@ int main(int argc, char *argv[])
 
               nrAnswers = 0;
             }
-            
           }
 
           //Game
           if (strcmp(command, "GAME") == 0)
           {
-            if ((strcmp(input, "1") == 0) || (strcmp(input, "2") == 0) || (strcmp(input, "3") == 0))
+            if (((strcmp(input, "1") == 0) || (strcmp(input, "2") == 0) || (strcmp(input, "3") == 0)) )
             {
               nrAnswers++;
               if (nrAnswers == 1)
               {
                 answers[0] = atoi(input);
-                
               }
 
               if (nrAnswers == 2)
@@ -381,25 +381,37 @@ int main(int argc, char *argv[])
                 nrAnswers = 0;
                 answers[0] = 0;
                 answers[1] = 0;
-
-                if (round == 3 && (score1 == 3 || score2 == 3))
-                {
-                  for (int j = 0; j < 2; j++)
-                  {
-                    menu(bytes, gamePlayers[j]);
-                  }
-                }
-                else if (round == 3 && score1 != 3 && score2 != 3)
-                {
-                  for (int j = 0; j < 2; j++)
-                  {
-                    bytes = send(gamePlayers[j], "START Match draw, game starting over\n", strlen("START Match draw, Game starting over\n"), 0);
-                  }
-
-                  round = 0;
-                }
               }
             }
+          }
+
+          if (strcmp(command, "LOST") == 0)
+          {
+            nrAnswers++;
+            if (nrAnswers == 1)
+            {
+              if (answers[0] != 1 && answers[0] != 2 && answers[0] != 3)
+              {
+                bytes = send(gamePlayers[0], "RESULT Too late, automatic loss\n", strlen("RESULT Too late, automatic loss\n"), 0);
+              }
+              else
+              {
+                bytes = send(gamePlayers[1], "RESULT Too late, automatic loss\n", strlen("RESULT Too late, automatic loss\n"), 0);
+              }
+            }
+
+            if (nrAnswers == 2)
+            {
+              for (int j = 0; j < 2; j++)
+              {
+                bytes = send(gamePlayers[j], "RESULT No player selected\n", strlen("RESULT No player selected\n"), 0);
+              }
+            }
+
+            checkWhoWon(answers[0], answers[1], bytes, gamePlayers, nrAnswers);
+            nrAnswers = 0;
+            answers[0] = 0;
+            answers[1] = 0;
           }
         }
       }
