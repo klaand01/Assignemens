@@ -86,6 +86,11 @@ int main(int argc, char *argv[])
         FD_CLR(clientSocket, &readfd);
       }
 
+      if (strcmp(command, "START") == 0)
+      {
+        sprintf(msg, "START\n");
+      }
+
       if (strcmp(command, "MENU") == 0)
       {
         sprintf(msg, "MENU %s\n", buf);
@@ -138,9 +143,20 @@ int main(int argc, char *argv[])
       {
         printf("%s\n", buf);
       }
+
+      if (strcmp(command, "START") == 0)
+      {
+        printf("%s\n", buf);
+      }
+
+      if (strcmp(command, "RESULT") == 0)
+      {
+        printf("%s\n", buf);
+        numbrBytes = send(clientSocket, "START\n", strlen("START\n"), 0);
+      }
     }
 
-    //fflush(stdin);
+    fflush(stdin);
   }
 
   close(clientSocket);

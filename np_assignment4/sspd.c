@@ -44,7 +44,7 @@ void checkWhoWon(int player1Answ, int player2Answ, int bytes, int players[], int
   {
     for (int i = 0; i < 2; i++)
     {
-      bytes = send(players[i], "\nDraw, round starts over\n", strlen("\nDraw, round starts over\n"), 0);
+      bytes = send(players[i], "RESULT \nDraw, round starts over\n", strlen("RESULT \nDraw, round starts over\n"), 0);
     }
     round--;
   }
@@ -54,14 +54,14 @@ void checkWhoWon(int player1Answ, int player2Answ, int bytes, int players[], int
     if (player1Answ == 1 || player1Answ == 2 || player1Answ == 3)
     {
       score1++;
-      bytes = send(players[0], "MSG \nYou won!\n", strlen("MSG \nYou won!\n"), 0);
-      bytes = send(players[1], "MSG \nYou lost\n", strlen("MSG \nYou lost\n"), 0);
+      bytes = send(players[0], "RESULT \nYou won!\n", strlen("RESULT \nYou won!\n"), 0);
+      bytes = send(players[1], "RESULT \nYou lost\n", strlen("RESULT \nYou lost\n"), 0);
     }
     else
     {
       score2++;
-      bytes = send(players[0], "MSG \nYou lost\n", strlen("MSG \nYou lost\n"), 0);
-      bytes = send(players[1], "MSG \nYou won!\n", strlen("MSG \nYou won!\n"), 0);
+      bytes = send(players[0], "RESULT \nYou lost\n", strlen("RESULT \nYou lost\n"), 0);
+      bytes = send(players[1], "RESULT \nYou won!\n", strlen("RESULT \nYou won!\n"), 0);
     }
   }
 
@@ -70,14 +70,14 @@ void checkWhoWon(int player1Answ, int player2Answ, int bytes, int players[], int
     if (player1Answ < player2Answ)
     {
       score1++;
-      bytes = send(players[0], "MSG \nYou won!\n", strlen("MSG \nYou won!\n"), 0);
-      bytes = send(players[1], "MSG \nYou lost\n", strlen("MSG \nYou lost\n"), 0);
+      bytes = send(players[0], "RESULT \nYou won!\n", strlen("RESULT \nYou won!\n"), 0);
+      bytes = send(players[1], "RESULT \nYou lost\n", strlen("RESULT \nYou lost\n"), 0);
     }
     else
     {
       score2++;
-      bytes = send(players[0], "MSG \nYou lost\n", strlen("MSG \nYou lost\n"), 0);
-      bytes = send(players[1], "MSG \nYou won!\n", strlen("MSG \nYou won!\n"), 0);
+      bytes = send(players[0], "RESULT \nYou lost\n", strlen("RESULT \nYou lost\n"), 0);
+      bytes = send(players[1], "RESULT \nYou won!\n", strlen("RESULT \nYou won!\n"), 0);
     }
   }
 
@@ -86,18 +86,18 @@ void checkWhoWon(int player1Answ, int player2Answ, int bytes, int players[], int
     if (player1Answ > player2Answ)
     {
       score1++;
-      bytes = send(players[0], "MSG \nYou won!\n", strlen("MSG \nYou won!\n"), 0);
-      bytes = send(players[1], "MSG \nYou lost\n", strlen("MSG \nYou lost\n"), 0);
+      bytes = send(players[0], "RESULT \nYou won!\n", strlen("RESULT \nYou won!\n"), 0);
+      bytes = send(players[1], "RESULT \nYou lost\n", strlen("RESULT \nYou lost\n"), 0);
     }
     else
     {
       score2++;
-      bytes = send(players[0], "MSG \nYou lost\n", strlen("MSG \nYou lost\n"), 0);
-      bytes = send(players[1], "MSG \nYou won!\n", strlen("MSG \nYou won!\n"), 0);
+      bytes = send(players[0], "RESULT \nYou lost\n", strlen("RESULT \nYou lost\n"), 0);
+      bytes = send(players[1], "RESULT \nYou won!\n", strlen("RESULT \nYou won!\n"), 0);
     }
   }
 
-  sprintf(scores, "MSG Scores player 1: %d\nScore player 2: %d\n\n", score1, score2);
+  sprintf(scores, "RESULT Scores player 1: %d\nScore player 2: %d\n\n", score1, score2);
 
   for (int i = 0; i < 2; i++)
   {
@@ -289,7 +289,7 @@ int main(int argc, char *argv[])
                 for (int j = 0; j <= clientCount; j++)
                 {
                   gamePlayers[j] = players[pairCount][j];
-                  bytes = send(gamePlayers[j], "GAME Press 'R' to start!\n", strlen("GAME Press 'R' to start!\n"), 0);
+                  bytes = send(gamePlayers[j], "START Press 'R' to start!\n", strlen("START Press 'R' to start!\n"), 0);
                   if (bytes == -1)
                   {
                     perror("Message not sent \n");
@@ -307,58 +307,64 @@ int main(int argc, char *argv[])
             }
           }
 
+          //Start of game
+          if (strcmp(command, "START") == 0)
+          {
+            
+
+            if (nrAnswers != 2)
+            {
+              nrAnswers++;
+            }
+            
+            //Fixa att båda måste trycka Enter, inte bara 1 två gånger
+            if (nrAnswers == 2)
+            {
+              timer = 3;
+
+              while (timer > 0)
+              {
+                time_t compTime = time(NULL);
+                if ((time(NULL) - 1) == compTime)
+                {
+                  memset(&gameMsg, 0, sizeof(gameMsg));
+                  sprintf(gameMsg, "GAME Game will start in %d seconds\n", timer);
+
+                  for (int j = 0; j < 2; j++)
+                  {
+                    bytes = send(gamePlayers[j], gameMsg, strlen(gameMsg), 0);
+                    if (bytes == -1)
+                    {
+                      perror("Message not sent \n");
+                      exit(1);
+                    }
+                  }
+
+                  timer--;
+                }
+              }
+
+              memset(&gameMsg, 0, sizeof(gameMsg));
+              sprintf(gameMsg, "GAME \nRound %d\n1. Rock\n2. Paper\n3. Scissor\n", ++round);
+
+              for (int j = 0; j < 2; j++)
+              {
+                bytes = send(gamePlayers[j], gameMsg, strlen(gameMsg), 0);
+                if (bytes == -1)
+                {
+                  perror("Message not sent \n");
+                  exit(1);
+                }
+              }
+
+              nrAnswers = 0;
+            }
+            
+          }
+
           //Game
           if (strcmp(command, "GAME") == 0)
           {
-            if (strcmp(input, "r") == 0)
-            {
-              if (nrAnswers != 2)
-              {
-                nrAnswers++;
-              }
-            
-              //Fixa att båda måste trycka Enter, int bara 1 två gånger
-              if (nrAnswers == 2)
-              {
-                while (timer > 0)
-                {
-                  time_t compTime = time(NULL);
-                  if ((time(NULL) - 1) == compTime)
-                  {
-                    memset(&gameMsg, 0, sizeof(gameMsg));
-                    sprintf(gameMsg, "GAME Game will start in %d seconds\n", timer);
-
-                    for (int j = 0; j < 2; j++)
-                    {
-                      bytes = send(gamePlayers[j], gameMsg, strlen(gameMsg), 0);
-                      if (bytes == -1)
-                      {
-                        perror("Message not sent \n");
-                        exit(1);
-                      }
-                    }
-
-                    timer--;
-                  }
-                }
-
-                memset(&gameMsg, 0, sizeof(gameMsg));
-                sprintf(gameMsg, "GAME \nRound %d\n1. Rock\n2. Paper\n3. Scissor\n", ++round);
-
-                for (int j = 0; j < 2; j++)
-                {
-                  bytes = send(gamePlayers[j], gameMsg, strlen(gameMsg), 0);
-                  if (bytes == -1)
-                  {
-                    perror("Message not sent \n");
-                    exit(1);
-                  }
-                }
-
-                nrAnswers = 0;
-              }
-            }
-
             if ((strcmp(input, "1") == 0) || (strcmp(input, "2") == 0) || (strcmp(input, "3") == 0))
             {
               nrAnswers++;
@@ -372,8 +378,27 @@ int main(int argc, char *argv[])
               {
                 answers[1] = atoi(input);
                 checkWhoWon(answers[0], answers[1], bytes, gamePlayers, nrAnswers);
+                nrAnswers = 0;
+                answers[0] = 0;
+                answers[1] = 0;
+
+                if (round == 3 && (score1 == 3 || score2 == 3))
+                {
+                  for (int j = 0; j < 2; j++)
+                  {
+                    menu(bytes, gamePlayers[j]);
+                  }
+                }
+                else if (round == 3 && score1 != 3 && score2 != 3)
+                {
+                  for (int j = 0; j < 2; j++)
+                  {
+                    bytes = send(gamePlayers[j], "START Match draw, game starting over\n", strlen("START Match draw, Game starting over\n"), 0);
+                  }
+
+                  round = 0;
+                }
               }
-              
             }
           }
         }
