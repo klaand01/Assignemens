@@ -8,6 +8,7 @@
 #include <arpa/inet.h>
 #include <netinet/in.h>
 #include <sys/time.h>
+#include <stdbool.h>
 
 #define MAXDATA 1000
 
@@ -23,19 +24,11 @@ void* getAddrs(struct sockaddr* addr)
   }
 }
 
-void menu(int bytes, int clientsocket)
-{
-  bytes = send(clientsocket, "MENU\n", strlen("MENU\n"), 0);
-  if (bytes == -1)
-  {
-    perror("Message not sent \n");
-  }
-}
-
-int score1 = 0, score2 = 0, round = 0;
+int score1 = 0, score2 = 0, round = 0, totalRounds = 0;
 
 void checkWhoWon(int player1Answ, int player2Answ, int bytes, int players[], int nrAnswers)
 {
+  bool finished = false;
   char scores[MAXDATA];
   memset(&scores, 0, sizeof(scores));
 
@@ -83,23 +76,54 @@ void checkWhoWon(int player1Answ, int player2Answ, int bytes, int players[], int
 
   if (round == 3 && (score1 == 3 || score2 == 3))
   {
-    sprintf(scores, "MENU Game finished!\n");
-    round = 0;
+    finished = true;
   }
   
   else if (round == 3 && score1 < 3 && score2 < 3)
   {
-    sprintf(scores, "START Match draw, game starting over\n");
+    sprintf(scores, "RESULT \nNo one won, game starting over\n");
     round = 0;
+    score1 = 0;
+    score2 = 0;
   }
   else
   {
-    sprintf(scores, "RESULT Scores player 1: %d\nScore player 2: %d\n\n", score1, score2);
+    sprintf(scores, "RESULT \nScores player 1: %d\nScore player 2: %d\n\n", score1, score2);
   }
 
-  for (int i = 0; i < 2; i++)
+  if (finished)
   {
-    bytes = send(players[i], scores, strlen(scores), 0);
+    if (score1 == 3)
+    {
+      sprintf(scores, "MENU \nCongratulatios you won!\n");
+      bytes = send(players[0], scores, strlen(scores), 0);
+
+      memset(&scores, 0, sizeof(scores));
+
+      sprintf(scores, "MENU \nToo bad you lost!\n");
+      bytes = send(players[1], scores, strlen(scores), 0);
+    }
+    else
+    {
+      sprintf(scores, "MENU \nCongratulatios you won!\n");
+      bytes = send(players[1], scores, strlen(scores), 0);
+
+      memset(&scores, 0, sizeof(scores));
+      
+      sprintf(scores, "MENU \nToo bad you lost!\n");
+      bytes = send(players[0], scores, strlen(scores), 0);
+    }
+
+    round = 0;
+    score1 = 0;
+    score2 = 0;
+  }
+  else
+  {
+    for (int i = 0; i < 2; i++)
+    {
+      bytes = send(players[i], scores, strlen(scores), 0);
+    }
   }
 }
 
@@ -232,11 +256,18 @@ int main(int argc, char *argv[])
           myAdd = inet_ntop(theirAddrs.sin_family, getAddrs((struct sockaddr *)&theirAddrs), myAddress, sizeof(myAddress));
           printf("New connection from %s:%d \n", myAdd, ntohs(theirAddrs.sin_port));
 
-          menu(bytes, clientSocket);
+          bytes = send(clientSocket, "MENU\n", strlen("MENU\n"), 0);
+          if (bytes == -1)
+          {
+            perror("Message not sent \n");
+          }
         }
         else
         {
           memset(&buf, 0, sizeof(buf));
+          memset(&command, 0, sizeof(command));
+          memset(&input, 0, sizeof(input));
+
           bytes = recv(i, &buf, sizeof(buf), 0);
           if (bytes == -1)
           {
@@ -252,7 +283,7 @@ int main(int argc, char *argv[])
           }
           else
           {
-            printf("Client sent: %s", buf);
+            //printf("Client sent: %s", buf);
             sscanf(buf, "%s %s", command, input);
           }
 
@@ -275,7 +306,7 @@ int main(int argc, char *argv[])
 
               if (clientCount != 1)
               {
-                bytes = send(i, "MSG Waiting for opponent...\n", strlen("MSG Waiting for opponent...\n"), 0);
+                bytes = send(i, "MSG \nWaiting for opponent...\n", strlen("MSG \nWaiting for opponent...\n"), 0);
                 if (bytes == -1)
                 {
                   perror("Message not sent \n");
@@ -290,7 +321,7 @@ int main(int argc, char *argv[])
 
                 for (int j = 0; j < 2; j++)
                 {
-                  bytes = send(gamePlayers[j], "START Press 'R' to start!\n", strlen("START Press 'R' to start!\n"), 0);
+                  bytes = send(gamePlayers[j], "START \nPress 'R' to start!\n", strlen("START \nPress 'R' to start!\n"), 0);
                   if (bytes == -1)
                   {
                     perror("Message not sent \n");
@@ -304,7 +335,17 @@ int main(int argc, char *argv[])
             //Client chose "Watch"
             if (strcmp(input, "2") == 0)
             {
-              printf("Watch Game\n");              
+              bytes = send(i, "MSG Choose the game you want to see:\n", strlen("MSG Choose the game you want to see:\n"), 0);
+              if (bytes == -1)
+              {
+                perror("Message not sent \n");
+              }
+            }
+
+            if (strcmp(input, "3") == 0)
+            {
+              sprintf(gameMsg, "SCORES %d\n", totalRounds);
+              bytes = send(i, gameMsg, strlen(gameMsg), 0);
             }
           }
 
@@ -329,7 +370,7 @@ int main(int argc, char *argv[])
                 if ((compTime.tv_sec - startTime.tv_sec) >= 1)
                 {
                   memset(&gameMsg, 0, sizeof(gameMsg));
-                  sprintf(gameMsg, "GAME Game will start in %d seconds\n", secondsToGame);
+                  sprintf(gameMsg, "GAME \nGame will start in %d seconds\n", secondsToGame);
 
                   for (int j = 0; j < 2; j++)
                   {
@@ -347,7 +388,8 @@ int main(int argc, char *argv[])
               }
               
               memset(&gameMsg, 0, sizeof(gameMsg));
-              sprintf(gameMsg, "GAME \nRound %d\n1. Rock\n2. Paper\n3. Scissor\n", ++round);
+              sprintf(gameMsg, "GAME \n\nRound %d\n1. Rock\n2. Paper\n3. Scissor\n", ++round);
+              totalRounds++;
 
               for (int j = 0; j < 2; j++)
               {
@@ -371,12 +413,25 @@ int main(int argc, char *argv[])
               nrAnswers++;
               if (nrAnswers == 1)
               {
-                answers[0] = atoi(input);
+                for (int j = 0; j < 2; j++)
+                {
+                  if (gamePlayers[j] == i)
+                  {
+                    answers[j] = atoi(input);
+                  }
+                }
               }
 
               if (nrAnswers == 2)
               {
-                answers[1] = atoi(input);
+                for (int j = 0; j < 2; j++)
+                {
+                  if (gamePlayers[j] == i)
+                  {
+                    answers[j] = atoi(input);
+                  }
+                }
+
                 checkWhoWon(answers[0], answers[1], bytes, gamePlayers, nrAnswers);
                 nrAnswers = 0;
                 answers[0] = 0;
@@ -387,29 +442,22 @@ int main(int argc, char *argv[])
 
           if (strcmp(command, "LOST") == 0)
           {
-            nrAnswers++;
-            if (nrAnswers == 1)
+            for (int j = 0; j < 2; j++)
             {
-              if (answers[0] != 1 && answers[0] != 2 && answers[0] != 3)
+              if (answers[j] != 1 && answers[j] != 2 && answers[j] != 3)
               {
-                bytes = send(gamePlayers[0], "RESULT Too late, automatic loss\n", strlen("RESULT Too late, automatic loss\n"), 0);
-              }
-              else
-              {
-                bytes = send(gamePlayers[1], "RESULT Too late, automatic loss\n", strlen("RESULT Too late, automatic loss\n"), 0);
+                bytes = send(gamePlayers[j], "RESULT \nToo late, automatic loss\n", strlen("RESULT \nToo late, automatic loss\n"), 0);
+                if (j == 0 && score1 > 0)
+                {
+                  score1--;
+                }
+                if (j == 1 && score2 > 0)
+                {
+                  score2--;
+                }
               }
             }
 
-            if (nrAnswers == 2)
-            {
-              for (int j = 0; j < 2; j++)
-              {
-                bytes = send(gamePlayers[j], "RESULT No player selected\n", strlen("RESULT No player selected\n"), 0);
-              }
-            }
-
-            checkWhoWon(answers[0], answers[1], bytes, gamePlayers, nrAnswers);
-            nrAnswers = 0;
             answers[0] = 0;
             answers[1] = 0;
           }
