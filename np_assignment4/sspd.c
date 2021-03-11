@@ -8,6 +8,7 @@
 #include <arpa/inet.h>
 #include <netinet/in.h>
 #include <sys/time.h>
+#include <string.h>
 #include <stdbool.h>
 
 #define MAXDATA 1000
@@ -24,11 +25,31 @@ void* getAddrs(struct sockaddr* addr)
   }
 }
 
-int score1 = 0, score2 = 0, round = 0, totalRounds = 0;
+int totalRounds = 0, indexPlayer = 5;
+int playerCounter = 0, nrReady = 0;
 
-void checkWhoWon(int player1Answ, int player2Answ, int bytes, int players[], int nrAnswers)
+struct games
+{
+  int player1;
+  int player2;
+  int score1;
+  int score2;
+  int secondsToGame;
+  int roundNr;
+  int index;
+  struct timeval startTime;
+  int answer1;
+  int answer2;
+  
+};
+
+struct games activePlayers[100];
+
+
+void checkWhoWon(int player1Answ, int player2Answ, int bytes, int player1, int player2, int nrAnswers, int index)
 {
   bool finished = false;
+  int players[2] = {player1, player2};
   char scores[MAXDATA];
   memset(&scores, 0, sizeof(scores));
 
@@ -36,11 +57,11 @@ void checkWhoWon(int player1Answ, int player2Answ, int bytes, int players[], int
   {
     if (player1Answ == 1 || player1Answ == 2 || player1Answ == 3)
     {
-      score1++;
+      activePlayers[index].score1++;
     }
     else
     {
-      score2++;
+      activePlayers[index].score2++;
     }
   }
 
@@ -48,54 +69,56 @@ void checkWhoWon(int player1Answ, int player2Answ, int bytes, int players[], int
   {
     if (player1Answ < player2Answ)
     {
-      score1++;
+      activePlayers[index].score1++;
     }
     else
     {
-      score2++;
+      activePlayers[index].score2++;
     }
   }
 
   if (abs(player1Answ - player2Answ) == 1)
   {
-    if (player1Answ > player2Answ)
+    if (player1Answ < player2Answ)
     {
-      score1++;
+      activePlayers[index].score1++;
     }
     else
     {
-      score2++;
+      activePlayers[index].score2++;
     }
   }
 
   if (player1Answ == player2Answ)
   {
-    sprintf(scores, "RESULT \nDraw, round starts over\n");
-    round--;
+    if (activePlayers[index].roundNr > 0)
+    {
+      activePlayers[index].roundNr--;
+    }
   }
 
-  if (round == 3 && (score1 == 3 || score2 == 3))
+  if (activePlayers[index].roundNr == 3 && (activePlayers[index].score1 == 3 || activePlayers[index].score2 == 3))
   {
     finished = true;
   }
-  
-  else if (round == 3 && score1 < 3 && score2 < 3)
+
+  else if (activePlayers[index].roundNr == 3 && activePlayers[index].score1 < 3 && activePlayers[index].score2 < 3)
   {
     sprintf(scores, "RESULT \nNo one won, game starting over\n");
-    round = 0;
-    score1 = 0;
-    score2 = 0;
+    activePlayers[index].roundNr = 0;
+    activePlayers[index].score1 = 0;
+    activePlayers[index].score2 = 0;
   }
   else
   {
-    sprintf(scores, "RESULT \nScores player 1: %d\nScore player 2: %d\n\n", score1, score2);
+    sprintf(scores, "RESULT \nScores player 1: %d\nScore player 2: %d\n\n", activePlayers[index].score1, activePlayers[index].score2);
   }
-
+  
   if (finished)
   {
-    if (score1 == 3)
+    if (activePlayers[index].score1 == 3)
     {
-      sprintf(scores, "MENU \nCongratulatios you won!\n");
+      sprintf(scores, "MENU \nCongratulations you won!\n");
       bytes = send(players[0], scores, strlen(scores), 0);
 
       memset(&scores, 0, sizeof(scores));
@@ -105,25 +128,59 @@ void checkWhoWon(int player1Answ, int player2Answ, int bytes, int players[], int
     }
     else
     {
-      sprintf(scores, "MENU \nCongratulatios you won!\n");
+      sprintf(scores, "MENU \nCongratulations you won!\n");
       bytes = send(players[1], scores, strlen(scores), 0);
 
       memset(&scores, 0, sizeof(scores));
-      
+    
       sprintf(scores, "MENU \nToo bad you lost!\n");
       bytes = send(players[0], scores, strlen(scores), 0);
     }
 
-    round = 0;
-    score1 = 0;
-    score2 = 0;
+    activePlayers[index].score1 = 0;
+    activePlayers[index].score2 = 0;
+    activePlayers[index].roundNr = 0;  
   }
   else
   {
-    for (int i = 0; i < 2; i++)
+    bytes = send(activePlayers[index].player1, scores, strlen(scores), 0);
+    bytes = send(activePlayers[index].player2, scores, strlen(scores), 0);
+  
+    nrReady = 2;
+  }
+}
+
+int countDown(int index, int bytes)
+{
+  char gameMsg[MAXDATA];
+  memset(&gameMsg, 0, sizeof(gameMsg));
+
+  if (activePlayers[index].secondsToGame > 0)
+  {
+    sprintf(gameMsg, "GAME \nGame will start in %d seconds\n", activePlayers[index].secondsToGame);
+    bytes = send(activePlayers[index].player1, gameMsg, sizeof(gameMsg), 0);
+    bytes = send(activePlayers[index].player2, gameMsg, sizeof(gameMsg), 0);
+    
+    activePlayers[index].secondsToGame--;
+    gettimeofday(&activePlayers[index].startTime, NULL);
+  }
+
+  if (activePlayers[index].secondsToGame == 0)
+  {
+    memset(&gameMsg, 0, sizeof(gameMsg));
+    sprintf(gameMsg, "GAME \n\nRound %d\n1. Rock\n2. Paper\n3. Scissor\n", activePlayers[index].roundNr);
+    totalRounds++;
+
+    bytes = send(activePlayers[index].player1, gameMsg, sizeof(gameMsg), 0);
+    bytes = send(activePlayers[index].player2, gameMsg, sizeof(gameMsg), 0);
+    if (bytes == -1)
     {
-      bytes = send(players[i], scores, strlen(scores), 0);
+      perror("Message not sent \n");
+      exit(1);
     }
+    
+    activePlayers[index].roundNr++;
+    nrReady = 0;
   }
 }
 
@@ -203,7 +260,7 @@ int main(int argc, char *argv[])
   struct sockaddr_in theirAddrs;
   socklen_t theirSize = sizeof(theirAddrs);
 
-  int clientSocket, bytes, players[50][2], clientCount = -1, pairCount = -1, gamePlayers[2];
+  int clientSocket, bytes, clientCount = -1;
   char buf[MAXDATA], command[20], input[10];
 
   fd_set readfd;
@@ -215,20 +272,44 @@ int main(int argc, char *argv[])
   FD_SET(serverSocket, &tempfd);
   maxfd = serverSocket;
 
-  int secondsToGame = 3, games = 0;
+  int games = 0, selectBytes;
   int nrAnswers = 0;
-  int answers[2];
   char gameMsg[MAXDATA];
+  int answers[2], players[2];
 
   while (1)
   {
+    struct timeval timer;
+    timer.tv_sec = 1;
+    timer.tv_usec = 0;
+
     memset(&buf, 0, sizeof(buf));
     readfd = tempfd;
-    bytes = select(maxfd + 1, &readfd, NULL, NULL, NULL);
-    if (bytes == -1)
+    selectBytes = select(maxfd + 1, &readfd, NULL, NULL, &timer);
+    if (selectBytes == -1)
     {
       printf("Wrong with select \n");
       exit(1);
+    }
+    if (selectBytes == 0)
+    {
+      //printf("Timed out\n");
+
+      if (nrReady == 2)
+      {
+        for (int j = 0; j < playerCounter; j++)
+        {
+          struct timeval compTime;
+          gettimeofday(&compTime, NULL);
+
+          if ((compTime.tv_sec - activePlayers[j].startTime.tv_sec) >= 1)
+          {
+            countDown(j, bytes);
+          }
+        }
+      }
+
+      if ()
     }
 
     for (int i = 0; i <= maxfd; i++)
@@ -283,7 +364,6 @@ int main(int argc, char *argv[])
           }
           else
           {
-            //printf("Client sent: %s", buf);
             sscanf(buf, "%s %s", command, input);
           }
 
@@ -296,17 +376,11 @@ int main(int argc, char *argv[])
               clientCount++;
               clientCount %= 2;
 
-              if (clientCount == 0)
-              {
-                pairCount++;
-              }
-              printf("PairCOUNt %d\n", pairCount);
-
-              players[pairCount][clientCount] = i;
-
               if (clientCount != 1)
               {
                 bytes = send(i, "MSG \nWaiting for opponent...\n", strlen("MSG \nWaiting for opponent...\n"), 0);
+                activePlayers[playerCounter].player1 = i;
+
                 if (bytes == -1)
                 {
                   perror("Message not sent \n");
@@ -315,19 +389,21 @@ int main(int argc, char *argv[])
               else
               {
                 printf("Starting game\n");
-                gamePlayers[0] = players[pairCount][0];
-                gamePlayers[1] = players[pairCount][1];
+                activePlayers[playerCounter].player2 = i;
                 games++;
 
-                for (int j = 0; j < 2; j++)
+                bytes = send(activePlayers[playerCounter].player1, "START \nPress 'R' to start!\n", strlen("START \nPress 'R' to start!\n"), 0);
+                bytes = send(activePlayers[playerCounter].player2, "START \nPress 'R' to start!\n", strlen("START \nPress 'R' to start!\n"), 0);
+                if (bytes == -1)
                 {
-                  bytes = send(gamePlayers[j], "START \nPress 'R' to start!\n", strlen("START \nPress 'R' to start!\n"), 0);
-                  if (bytes == -1)
-                  {
-                    perror("Message not sent \n");
-                  }
+                  perror("Message not sent \n");
                 }
                 
+                activePlayers[playerCounter].index = playerCounter;
+                activePlayers[playerCounter].score1 = 0;
+                activePlayers[playerCounter].score2 = 0;
+                activePlayers[playerCounter].roundNr = 0;
+                playerCounter++;
                 printf("Game starting!\n");
               }
             }
@@ -335,13 +411,14 @@ int main(int argc, char *argv[])
             //Client chose "Watch"
             if (strcmp(input, "2") == 0)
             {
-              bytes = send(i, "MSG Choose the game you want to see:\n", strlen("MSG Choose the game you want to see:\n"), 0);
+              bytes = send(i, "MSG \nChoose the game you want to see:\n", strlen("MSG \nChoose the game you want to see:\n"), 0);
               if (bytes == -1)
               {
                 perror("Message not sent \n");
               }
             }
 
+            //Client chose "Highscore"
             if (strcmp(input, "3") == 0)
             {
               sprintf(gameMsg, "SCORES %d\n", totalRounds);
@@ -352,56 +429,24 @@ int main(int argc, char *argv[])
           //Start of game
           if (strcmp(command, "START") == 0)
           {
-            if (nrAnswers != 2)
+            if (nrReady != 2)
             {
-              nrAnswers++;
+              nrReady++;
             }
-            
-            //Fixa att båda måste trycka Enter, inte bara 1 två gånger
-            if (nrAnswers == 2)
-            {
-              secondsToGame = 3;
-              struct timeval startTime, compTime;
 
-              while (secondsToGame > -1)
+            if (nrReady == 2)
+            {
+              for (int j = 0; j < playerCounter; j++)
               {
+                struct timeval compTime;
                 gettimeofday(&compTime, NULL);
 
-                if ((compTime.tv_sec - startTime.tv_sec) >= 1)
+                if ((compTime.tv_sec - activePlayers[j].startTime.tv_sec) >= 1)
                 {
-                  memset(&gameMsg, 0, sizeof(gameMsg));
-                  sprintf(gameMsg, "GAME \nGame will start in %d seconds\n", secondsToGame);
-
-                  for (int j = 0; j < 2; j++)
-                  {
-                    bytes = send(gamePlayers[j], gameMsg, strlen(gameMsg), 0);
-                    if (bytes == -1)
-                    {
-                      perror("Message not sent \n");
-                      exit(1);
-                    }
-                  }
-
-                  gettimeofday(&startTime, NULL);
-                  secondsToGame--;
+                  activePlayers[j].secondsToGame = 3;
+                  countDown(j, bytes);
                 }
               }
-              
-              memset(&gameMsg, 0, sizeof(gameMsg));
-              sprintf(gameMsg, "GAME \n\nRound %d\n1. Rock\n2. Paper\n3. Scissor\n", ++round);
-              totalRounds++;
-
-              for (int j = 0; j < 2; j++)
-              {
-                bytes = send(gamePlayers[j], gameMsg, strlen(gameMsg), 0);
-                if (bytes == -1)
-                {
-                  perror("Message not sent \n");
-                  exit(1);
-                }
-              }
-
-              nrAnswers = 0;
             }
           }
 
@@ -410,56 +455,68 @@ int main(int argc, char *argv[])
           {
             if (((strcmp(input, "1") == 0) || (strcmp(input, "2") == 0) || (strcmp(input, "3") == 0)) )
             {
-              nrAnswers++;
-              if (nrAnswers == 1)
+              for (int j = 0; j < playerCounter; j++)
               {
-                for (int j = 0; j < 2; j++)
+                if (activePlayers[j].player1 == i)
                 {
-                  if (gamePlayers[j] == i)
-                  {
-                    answers[j] = atoi(input);
-                  }
+                  indexPlayer = j;
+                  players[0] = activePlayers[j].player1;
+                  activePlayers[j].answer1 = atoi(input);
+                  answers[0] = activePlayers[j].answer1;
                 }
+
+                if (activePlayers[j].player2 == i)
+                {
+                  indexPlayer = j;
+                  players[1] = activePlayers[j].player2;
+                  activePlayers[j].answer2 = atoi(input);
+                  answers[1] = activePlayers[j].answer2;
+                }
+              }
+
+              if (nrAnswers < 2)
+              {
+                nrAnswers++;
               }
 
               if (nrAnswers == 2)
               {
-                for (int j = 0; j < 2; j++)
-                {
-                  if (gamePlayers[j] == i)
-                  {
-                    answers[j] = atoi(input);
-                  }
-                }
-
-                checkWhoWon(answers[0], answers[1], bytes, gamePlayers, nrAnswers);
+                checkWhoWon(answers[0], answers[1], bytes, players[0], players[1], nrAnswers, indexPlayer);
                 nrAnswers = 0;
-                answers[0] = 0;
-                answers[1] = 0;
+
+                activePlayers[indexPlayer].answer1 = 0;
+                activePlayers[indexPlayer].answer1 = 0;
               }
             }
           }
 
           if (strcmp(command, "LOST") == 0)
           {
-            for (int j = 0; j < 2; j++)
+            for (int j = 0; j < playerCounter; j++)
             {
-              if (answers[j] != 1 && answers[j] != 2 && answers[j] != 3)
+              if (activePlayers[j].answer1 != 1 && activePlayers[j].answer1 != 2 && activePlayers[j].answer1 != 3)
               {
-                bytes = send(gamePlayers[j], "RESULT \nToo late, automatic loss\n", strlen("RESULT \nToo late, automatic loss\n"), 0);
-                if (j == 0 && score1 > 0)
+                bytes = send(activePlayers[j].player1, "RESULT \nToo late, automatic loss\n", strlen("RESULT \nToo late, automatic loss\n"), 0);
+                
+                if (activePlayers[i].score1 > 0)
                 {
-                  score1--;
-                }
-                if (j == 1 && score2 > 0)
-                {
-                  score2--;
+                  activePlayers[i].score1--;
                 }
               }
-            }
 
-            answers[0] = 0;
-            answers[1] = 0;
+              if (activePlayers[j].answer2 != 1 && activePlayers[j].answer2 != 2 && activePlayers[j].answer2 != 3)
+              {
+                bytes = send(activePlayers[j].player2, "RESULT \nToo late, automatic loss\n", strlen("RESULT \nToo late, automatic loss\n"), 0);
+                
+                if (activePlayers[i].score2 > 0)
+                {
+                  activePlayers[i].score2--;
+                }
+              }
+
+              activePlayers[j].answer1 = 0;
+              activePlayers[j].answer2 = 0;
+            }
           }
         }
       }

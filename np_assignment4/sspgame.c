@@ -68,55 +68,9 @@ int main(int argc, char *argv[])
   struct timeval startTime, endTime;
   int diffTime[50], counter = 0, totalRounds, totalTime;
 
-  while (strcmp(command, "GAME") != 0)
+  while (1)
   {
-    if (strcmp(command, "RESULT") == 0)
-    {
-      printf("Total seconds for answering: %d\n", totalTime);
-      numbrBytes = send(clientSocket, "START\n", strlen("START\n"), 0);
-    }
-
-    if (strcmp(command, "MENU") == 0)
-    {
-      printf("1. Play\n2. Watch\n3. Highscore\n0. Exit\n");
-    }
-
-    if (strcmp(command, "SCORES") == 0)
-    {
-      temp = strchr(buf, ' ');
-      printf("%s\n", temp);
-      sscanf(buf, "%s %d", command, &totalRounds);
-        
-      for (int i = 0; i < counter; i++)
-      {
-        diffTime[i] = totalTime / totalRounds;
-      }
-
-      for (int i = 0; i < counter; i++)
-      {
-        for (int j = i; j < counter - 1; j++)
-        {
-          if (diffTime[i] > diffTime[j])
-          {
-            int temp = diffTime[i];
-            diffTime[i] = diffTime[j];
-            diffTime[j] = temp;
-          }
-        }
-      }
-
-      for (int i = 0; i <= counter; i++)
-      {
-        printf("Highscore list: %d\n", diffTime[i]);
-        printf("Totaltime %d TotalRounds %d\n", totalTime, totalRounds);
-      }
-      counter++;
-      printf("1. Play\n2. Watch\n3. Highscore\n0. Exit\n");
-      strcpy(command, "MENU");
-    }
-
     readfd = tempfd;
-
     numbrBytes = select(clientSocket + 1, &readfd, NULL, NULL, NULL);
     if (numbrBytes == -1)
     {
@@ -141,6 +95,21 @@ int main(int argc, char *argv[])
       else
       {
         sscanf(buf, "%s", command);
+        gettimeofday(&startTime, NULL);
+      }
+
+      if (strcmp(command, "RESULT") == 0)
+      {
+        temp = strchr(buf, ' ');
+        printf("%s\n", temp);
+        printf("Total seconds for answering: %d\n", totalTime);
+        numbrBytes = send(clientSocket, "START\n", strlen("START\n"), 0);
+      }
+
+      if (strcmp(command, "MENU") == 0)
+      {
+        printf("%s\n", buf);
+        printf("1. Play\n2. Watch\n3. Highscore\n0. Exit\n");
       }
 
       if (strcmp(command, "MSG") == 0)
@@ -159,6 +128,40 @@ int main(int argc, char *argv[])
       {
         temp = strchr(buf, ' ');
         printf("%s\n", temp);
+      }
+
+      if (strcmp(command, "SCORES") == 0)
+      {
+        temp = strchr(buf, ' ');
+        printf("%s\n", temp);
+        sscanf(buf, "%s %d", command, &totalRounds);
+        
+        for (int i = 0; i < counter; i++)
+        {
+          diffTime[i] = totalTime / totalRounds;
+        }
+
+        for (int i = 0; i < counter; i++)
+        {
+          for (int j = i; j < counter - 1; j++)
+          {
+            if (diffTime[i] > diffTime[j])
+            {
+              int temp = diffTime[i];
+              diffTime[i] = diffTime[j];
+              diffTime[j] = temp;
+            }
+          }
+        }
+
+        for (int i = 0; i <= counter; i++)
+        {
+          printf("Highscore list: %d\n", diffTime[i]);
+          printf("Totaltime %d TotalRounds %d\n", totalTime, totalRounds);
+        }
+        counter++;
+        printf("1. Play\n2. Watch\n3. Highscore\n0. Exit\n");
+        strcpy(command, "MENU");
       }
     }
 
@@ -197,16 +200,20 @@ int main(int argc, char *argv[])
         perror("Wrong with menu send\n");
         exit(1);
       }
-    }
 
-    while (strcmp(command, "GAME") == 0)
+      gettimeofday(&endTime, NULL);
+      totalTime = totalTime + (endTime.tv_sec - startTime.tv_sec);
+    }
+  }
+
+
+
+  while (0)
     {
-      struct timeval timer;
-      timer.tv_sec = 10;
-      timer.tv_usec = 0;
+      
 
       readfd = tempfd;
-      selectBytes = select(clientSocket + 1, &readfd, NULL, NULL, &timer);
+      selectBytes = select(clientSocket + 1, &readfd, NULL, NULL, NULL);
       if (selectBytes == -1)
       {
         perror("Wrong with select\n");
@@ -223,10 +230,7 @@ int main(int argc, char *argv[])
         memset(&msg, 0, sizeof(msg));
         scanf("%s", buf);
 
-        if (strcmp(command, "GAME") == 0)
-        {
-          sprintf(msg, "GAME %s\n", buf);
-        }
+        
 
         numbrBytes = send(clientSocket, msg, strlen(msg), 0);
         if (numbrBytes == -1)
@@ -235,8 +239,7 @@ int main(int argc, char *argv[])
           exit(1);
         }
 
-        gettimeofday(&endTime, NULL);
-        totalTime = totalTime + (endTime.tv_sec - startTime.tv_sec);
+        
       }
 
       if (FD_ISSET(clientSocket, &readfd))
@@ -259,11 +262,10 @@ int main(int argc, char *argv[])
           temp = strchr(buf, ' ');
           printf("%s", temp);
           sscanf(buf, "%s", command);
-          gettimeofday(&startTime, NULL);
+          
         }
       }
     }
-  }
 
   close(clientSocket);
 }
