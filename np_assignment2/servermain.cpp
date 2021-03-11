@@ -79,7 +79,7 @@ int getPort(struct sockaddr *addr)
   return ((struct sockaddr_in6*)addr)->sin6_port;
 }
 
-void convertCalcMsgToPrintable(struct calcMessage* clientMsg)
+void calcMsgPrint(struct calcMessage* clientMsg)
 {
   clientMsg->type = ntohs(clientMsg->type);
   clientMsg->message = ntohl(clientMsg->message);
@@ -88,7 +88,7 @@ void convertCalcMsgToPrintable(struct calcMessage* clientMsg)
   clientMsg->minor_version = ntohs(clientMsg->minor_version);
 }
 
-void convertCalcMsgToSendable(struct calcMessage *serverMsg)
+void calcMsgSend(struct calcMessage *serverMsg)
 {
   serverMsg->type = htons(serverMsg->type);
   serverMsg->message = htonl(serverMsg->message);
@@ -97,7 +97,7 @@ void convertCalcMsgToSendable(struct calcMessage *serverMsg)
   serverMsg->minor_version = htons(serverMsg->minor_version);
 }
 
-void convertCalcProtocolToPrintable(struct calcProtocol* clientMsg)
+void calcProtocolPrint(struct calcProtocol* clientMsg)
 {
   clientMsg->type = ntohs(clientMsg->type);
   clientMsg->major_version = ntohs(clientMsg->major_version);
@@ -109,7 +109,7 @@ void convertCalcProtocolToPrintable(struct calcProtocol* clientMsg)
   clientMsg->inResult = ntohl(clientMsg->inResult);
 }
 
-void convertCalcProtocolToSendable(calcProtocol *serverMsg)
+void calcProtocolSend(calcProtocol *serverMsg)
 {
   serverMsg->type = htons(serverMsg->type);
   serverMsg->major_version = htons(serverMsg->major_version);
@@ -178,14 +178,14 @@ int main(int argc, char *argv[])
   okMsg.message = 1;
   okMsg.protocol = 17;
   okMsg.type = 2;
-  convertCalcMsgToSendable(&okMsg);
+  calcMsgSend(&okMsg);
   
   notOkMsg.major_version = 1;
   notOkMsg.minor_version = 0;
   notOkMsg.message = 2;
   notOkMsg.protocol = 17;
   notOkMsg.type = 2;
-  convertCalcMsgToSendable(&notOkMsg);
+  calcMsgSend(&notOkMsg);
 
   if ((returnValue = getaddrinfo(Desthost, Destport, &addrs, &servinfo)) != 0)
   {
@@ -250,7 +250,7 @@ int main(int argc, char *argv[])
     if (numbytes == sizeof(calcMessage))
     {
       cMessage = (calcMessage *)cProtocol;
-      convertCalcMsgToPrintable(cMessage);
+      calcMsgPrint(cMessage);
 
       if (cMessage->major_version != 1 || cMessage->message != 0 || cMessage->minor_version != 0 || 
       cMessage->protocol != 17 || cMessage->type != 22)
@@ -353,7 +353,7 @@ int main(int argc, char *argv[])
         }
       }
 
-      convertCalcProtocolToSendable(tempProtocol);
+      calcProtocolSend(tempProtocol);
 
       numbytes = sendto(serverSocket, tempProtocol, sizeof(*tempProtocol), 0, (struct sockaddr *)&clientIn, clientinSize);
       if (numbytes < 0)
@@ -370,7 +370,7 @@ int main(int argc, char *argv[])
     }
     else if (numbytes == sizeof(calcProtocol))
     {
-      convertCalcProtocolToPrintable(cProtocol);
+      calcProtocolPrint(cProtocol);
 
       inet_ntop(clientIn.ss_family, getAddr((struct sockaddr *)&clientIn), 
       ipAddr2, sizeof(ipAddr2));
@@ -383,7 +383,7 @@ int main(int argc, char *argv[])
         port1 = getPort((struct sockaddr *)&clientIn);
         port2 = getPort((struct sockaddr *)clients[i].clientInfo);
 
-        convertCalcProtocolToPrintable(clients[i].clientProtocol);
+        calcProtocolPrint(clients[i].clientProtocol);
 
         if (clients[i].clientProtocol->id == cProtocol->id && strcmp(ipAddr1, ipAddr2) == 0 && found != true &&
         port1 == port2)
@@ -436,11 +436,6 @@ int main(int argc, char *argv[])
         }
         continue;
       }
-
-
-
-
-      
     }
     else
     {
