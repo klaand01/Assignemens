@@ -25,11 +25,14 @@ void* getAddrs(struct sockaddr* addr)
   }
 }
 
-int totalRounds = 0, indexPlayer = 5;
-int playerCounter = 0, nrReady = 0;
+int totalRounds = 0, nrGames = 0, nrWatches = 0;
+int playerCounter = 0, counter = -1;
+int answers[2], players[2], playersWatch[50];;
+bool watches = false;
 
 struct games
 {
+  struct timeval startTime;
   int player1;
   int player2;
   int score1;
@@ -37,47 +40,39 @@ struct games
   int secondsToGame;
   int roundNr;
   int index;
-  struct timeval startTime;
   int answer1;
   int answer2;
-  
+  int ready;
+  int timeReady;
 };
 
 struct games activePlayers[100];
 
 
-void checkWhoWon(int player1Answ, int player2Answ, int bytes, int player1, int player2, int nrAnswers, int index)
+void checkWhoWon(int player1Answ, int player2Answ, int bytes, int player1, int player2, int indexPlayer, bool both)
 {
   bool finished = false;
   int players[2] = {player1, player2};
   char scores[MAXDATA];
+  int index = indexPlayer;
   memset(&scores, 0, sizeof(scores));
 
-  if (nrAnswers == 1)
+  if (both == true)
   {
-    if (player1Answ == 1 || player1Answ == 2 || player1Answ == 3)
-    {
-      activePlayers[index].score1++;
-    }
-    else
-    {
-      activePlayers[index].score2++;
-    }
+    sprintf(scores, "RESULT No player selected\n");
   }
 
-  if (abs(player1Answ - player2Answ) == 2)
+  else if (player1Answ == 0)
   {
-    if (player1Answ < player2Answ)
-    {
-      activePlayers[index].score1++;
-    }
-    else
-    {
-      activePlayers[index].score2++;
-    }
+    activePlayers[index].score2++;
+  }
+  
+  else if (player2Answ == 0)
+  {
+    activePlayers[index].score1++;
   }
 
-  if (abs(player1Answ - player2Answ) == 1)
+  else if (abs(player1Answ - player2Answ) == 2)
   {
     if (player1Answ < player2Answ)
     {
@@ -89,7 +84,19 @@ void checkWhoWon(int player1Answ, int player2Answ, int bytes, int player1, int p
     }
   }
 
-  if (player1Answ == player2Answ)
+  else if (abs(player1Answ - player2Answ) == 1)
+  {
+    if (player1Answ < player2Answ)
+    {
+      activePlayers[index].score1++;
+    }
+    else
+    {
+      activePlayers[index].score2++;
+    }
+  }
+
+  else if (player1Answ == player2Answ)
   {
     if (activePlayers[index].roundNr > 0)
     {
@@ -97,12 +104,12 @@ void checkWhoWon(int player1Answ, int player2Answ, int bytes, int player1, int p
     }
   }
 
-  if (activePlayers[index].roundNr == 3 && (activePlayers[index].score1 == 3 || activePlayers[index].score2 == 3))
+  if (activePlayers[index].roundNr >= 3 && (activePlayers[index].score1 == 3 || activePlayers[index].score2 == 3))
   {
     finished = true;
   }
 
-  else if (activePlayers[index].roundNr == 3 && activePlayers[index].score1 < 3 && activePlayers[index].score2 < 3)
+  if (activePlayers[index].roundNr >= 3 && activePlayers[index].score1 < 3 && activePlayers[index].score2 < 3)
   {
     sprintf(scores, "RESULT \nNo one won, game starting over\n");
     activePlayers[index].roundNr = 0;
@@ -137,17 +144,44 @@ void checkWhoWon(int player1Answ, int player2Answ, int bytes, int player1, int p
       bytes = send(players[0], scores, strlen(scores), 0);
     }
 
+    if (watches = true)
+    {
+      bytes = send(playersWatch[counter], scores, strlen(scores), 0);
+    }
+
     activePlayers[index].score1 = 0;
     activePlayers[index].score2 = 0;
-    activePlayers[index].roundNr = 0;  
+    activePlayers[index].roundNr = 0;
+    nrGames--;
+    watches = false;
+  }
+  else if (both == true)
+  {
+    bytes = send(activePlayers[index].player1, scores, strlen(scores), 0);
+    bytes = send(activePlayers[index].player2, scores, strlen(scores), 0);
+
+    if (watches = true)
+    {
+      bytes = send(playersWatch[counter], scores, strlen(scores), 0);
+    }
+
+    activePlayers[index].timeReady = 2;
   }
   else
   {
     bytes = send(activePlayers[index].player1, scores, strlen(scores), 0);
     bytes = send(activePlayers[index].player2, scores, strlen(scores), 0);
+
+    if (watches = true)
+    {
+      bytes = send(playersWatch[counter], scores, strlen(scores), 0);
+    }
   
-    nrReady = 2;
+    activePlayers[index].timeReady = 2;
   }
+
+  activePlayers[index].answer1 = 0;
+  activePlayers[index].answer1 = 0;
 }
 
 int countDown(int index, int bytes)
@@ -157,9 +191,14 @@ int countDown(int index, int bytes)
 
   if (activePlayers[index].secondsToGame > 0)
   {
-    sprintf(gameMsg, "GAME \nGame will start in %d seconds\n", activePlayers[index].secondsToGame);
+    sprintf(gameMsg, "GAME \nGame will start in %d seconds", activePlayers[index].secondsToGame);
     bytes = send(activePlayers[index].player1, gameMsg, sizeof(gameMsg), 0);
     bytes = send(activePlayers[index].player2, gameMsg, sizeof(gameMsg), 0);
+
+    if (watches = true)
+    {
+      bytes = send(playersWatch[counter], gameMsg, strlen(gameMsg), 0);
+    }
     
     activePlayers[index].secondsToGame--;
     gettimeofday(&activePlayers[index].startTime, NULL);
@@ -178,9 +217,15 @@ int countDown(int index, int bytes)
       perror("Message not sent \n");
       exit(1);
     }
+
+    if (watches = true)
+    {
+      bytes = send(playersWatch[counter], gameMsg, strlen(gameMsg), 0);
+    }
     
     activePlayers[index].roundNr++;
-    nrReady = 0;
+    activePlayers[index].timeReady = 0;
+    activePlayers[index].secondsToGame = 3;
   }
 }
 
@@ -272,10 +317,9 @@ int main(int argc, char *argv[])
   FD_SET(serverSocket, &tempfd);
   maxfd = serverSocket;
 
-  int games = 0, selectBytes;
-  int nrAnswers = 0;
-  char gameMsg[MAXDATA];
-  int answers[2], players[2];
+  int selectBytes;
+  char gameMsg[MAXDATA], watchMsg[MAXDATA];
+  bool both = false;
 
   while (1)
   {
@@ -293,23 +337,19 @@ int main(int argc, char *argv[])
     }
     if (selectBytes == 0)
     {
-      //printf("Timed out\n");
-
-      if (nrReady == 2)
+      for (int i = 0; i < playerCounter; i++)
       {
-        for (int j = 0; j < playerCounter; j++)
+        if (activePlayers[i].timeReady == 2)
         {
           struct timeval compTime;
           gettimeofday(&compTime, NULL);
 
-          if ((compTime.tv_sec - activePlayers[j].startTime.tv_sec) >= 1)
+          if ((compTime.tv_sec - activePlayers[i].startTime.tv_sec) >= 1)
           {
-            countDown(j, bytes);
+            countDown(i, bytes);
           }
         }
       }
-
-      if ()
     }
 
     for (int i = 0; i <= maxfd; i++)
@@ -390,7 +430,7 @@ int main(int argc, char *argv[])
               {
                 printf("Starting game\n");
                 activePlayers[playerCounter].player2 = i;
-                games++;
+                nrGames++;
 
                 bytes = send(activePlayers[playerCounter].player1, "START \nPress 'R' to start!\n", strlen("START \nPress 'R' to start!\n"), 0);
                 bytes = send(activePlayers[playerCounter].player2, "START \nPress 'R' to start!\n", strlen("START \nPress 'R' to start!\n"), 0);
@@ -402,7 +442,11 @@ int main(int argc, char *argv[])
                 activePlayers[playerCounter].index = playerCounter;
                 activePlayers[playerCounter].score1 = 0;
                 activePlayers[playerCounter].score2 = 0;
-                activePlayers[playerCounter].roundNr = 0;
+                activePlayers[playerCounter].roundNr = 1;
+                activePlayers[playerCounter].ready = 0;
+                activePlayers[playerCounter].timeReady = 0;
+                activePlayers[playerCounter].secondsToGame = 3;
+                memset(&playersWatch, 0, sizeof(playersWatch));
                 playerCounter++;
                 printf("Game starting!\n");
               }
@@ -411,7 +455,10 @@ int main(int argc, char *argv[])
             //Client chose "Watch"
             if (strcmp(input, "2") == 0)
             {
-              bytes = send(i, "MSG \nChoose the game you want to see:\n", strlen("MSG \nChoose the game you want to see:\n"), 0);
+              sprintf(watchMsg, "WATCH Game %d\nPress 'Q' to go back\n", nrGames);
+              bytes = send(i, watchMsg, strlen(watchMsg), 0);
+              counter++;
+
               if (bytes == -1)
               {
                 perror("Message not sent \n");
@@ -426,24 +473,48 @@ int main(int argc, char *argv[])
             }
           }
 
+          //Watching
+          if (strcmp(command, "WATCH"))
+          {
+            if ((strcmp(input, "1") == 0))
+            {
+              watches = true;
+              playersWatch[counter] = i;
+              nrWatches++;
+            }
+          }
+
           //Start of game
           if (strcmp(command, "START") == 0)
           {
-            if (nrReady != 2)
+            int indexPlayer;
+            for (int j = 0; j < playerCounter; j++)
             {
-              nrReady++;
+              if (activePlayers[j].player1 == i)
+              {
+                indexPlayer = j;
+              }
+
+              if (activePlayers[j].player2 == i)
+              {
+                indexPlayer = j;
+              }
             }
 
-            if (nrReady == 2)
+            if (activePlayers[indexPlayer].timeReady < 2)
             {
+              activePlayers[indexPlayer].timeReady++;
+            }
+
+            if (activePlayers[indexPlayer].timeReady == 2)
+            {
+              struct timeval compTime;
+              gettimeofday(&compTime, NULL);
+
               for (int j = 0; j < playerCounter; j++)
               {
-                struct timeval compTime;
-                gettimeofday(&compTime, NULL);
-
                 if ((compTime.tv_sec - activePlayers[j].startTime.tv_sec) >= 1)
                 {
-                  activePlayers[j].secondsToGame = 3;
                   countDown(j, bytes);
                 }
               }
@@ -453,6 +524,7 @@ int main(int argc, char *argv[])
           //Game
           if (strcmp(command, "GAME") == 0)
           {
+            int indexPlayer;
             if (((strcmp(input, "1") == 0) || (strcmp(input, "2") == 0) || (strcmp(input, "3") == 0)) )
             {
               for (int j = 0; j < playerCounter; j++)
@@ -474,49 +546,47 @@ int main(int argc, char *argv[])
                 }
               }
 
-              if (nrAnswers < 2)
+              if (activePlayers[indexPlayer].ready < 2)
               {
-                nrAnswers++;
+                activePlayers[indexPlayer].ready++;
               }
 
-              if (nrAnswers == 2)
+              if (activePlayers[indexPlayer].ready == 2)
               {
-                checkWhoWon(answers[0], answers[1], bytes, players[0], players[1], nrAnswers, indexPlayer);
-                nrAnswers = 0;
-
-                activePlayers[indexPlayer].answer1 = 0;
-                activePlayers[indexPlayer].answer1 = 0;
+                checkWhoWon(answers[0], answers[1], bytes, players[0], players[1], indexPlayer, both);
+                activePlayers[indexPlayer].ready = 0;
               }
             }
           }
 
+          //Client timed out
           if (strcmp(command, "LOST") == 0)
           {
+            int indexPlayer;
             for (int j = 0; j < playerCounter; j++)
             {
-              if (activePlayers[j].answer1 != 1 && activePlayers[j].answer1 != 2 && activePlayers[j].answer1 != 3)
+              if (activePlayers[j].player1 == i)
               {
-                bytes = send(activePlayers[j].player1, "RESULT \nToo late, automatic loss\n", strlen("RESULT \nToo late, automatic loss\n"), 0);
-                
-                if (activePlayers[i].score1 > 0)
-                {
-                  activePlayers[i].score1--;
-                }
+                indexPlayer = j;
+                answers[0] = 0;
+                players[0] = activePlayers[j].player1;
               }
 
-              if (activePlayers[j].answer2 != 1 && activePlayers[j].answer2 != 2 && activePlayers[j].answer2 != 3)
+              if (activePlayers[j].player2 == i)
               {
-                bytes = send(activePlayers[j].player2, "RESULT \nToo late, automatic loss\n", strlen("RESULT \nToo late, automatic loss\n"), 0);
-                
-                if (activePlayers[i].score2 > 0)
-                {
-                  activePlayers[i].score2--;
-                }
+                indexPlayer = j;
+                answers[1] = 0;
+                players[1] = activePlayers[j].player2;
               }
-
-              activePlayers[j].answer1 = 0;
-              activePlayers[j].answer2 = 0;
             }
+
+            if (answers[0] == 0 && answers[1] == 0)
+            {
+              both = true;
+            }
+
+            checkWhoWon(answers[0], answers[1], bytes, players[0], players[1], indexPlayer, both);
+            both = false;
           }
         }
       }

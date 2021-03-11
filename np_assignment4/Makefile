@@ -3,23 +3,15 @@ CC_FLAGS = -w -g
 
 
 
-all: test client server
+all: client server
 
 
-main.o: main.c
-	$(CC) -Wall -I. -c main.c
-
-
-test: main.o
-	$(CC) -I./ -Wall -lncurses  -o test main.o 
-
-
-client: client.o
+client: sspgame
 	$(CC) -Wall -o sspgame client.o
 
-server: server.o
+server: sspd
 	$(CC) -Wall -o sspd server.o
 
 
 clean:
-	rm *.o *.a test server client
+	rm *.o *.a sspd sspgame
