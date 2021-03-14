@@ -29,6 +29,7 @@ int main(int argc, char *argv[])
   if (argc != 2)
   {
     printf("Usage: %s hostname:port (%d)\n", argv[0], argc);
+    exit(1);
   }
   
   char delim[]=":";
@@ -90,99 +91,152 @@ int main(int argc, char *argv[])
   printf("Connected to %s:%d local %s:%d \n", Desthost, port,
   myAdd, ntohs(sockAddrss.sin_port));
 
-  while (1)
+
+  memset(&buf, 0, sizeof(buf));
+  numbrBytes = recv(clientSocket, buf, MAXDATA, 0);
+  if (numbrBytes == -1)
   {
-    memset(&buf, 0, sizeof(buf));
-    numbrBytes = recv(clientSocket, buf, MAXDATA, 0);
+    perror("Wrong with message \n");
+  }
+  if (numbrBytes == 0)
+  {
+    printf("Server closed down\n");
+    close(clientSocket);
+  }
+  else
+  {
+    printf("Client: Recieved '%s' \n", buf);
+  }
+
+  if (strcmp(buf, "TEXT TCP 1.0\n\n") == 0)
+  {
+    numbrBytes = send(clientSocket, "OK\n", strlen("OK\n"), 0);
+    printf("Sent OK \n");
     if (numbrBytes == -1)
     {
-      perror("Wrong with message \n");
-    }
-
-    printf("Client: Recieved '%s' \n", buf);
-
-    if (strcmp(buf, "TEXT TCP 1.0\n\n") == 0)
-    {
-      numbrBytes = send(clientSocket, "OK\n", strlen("OK\n"), 0);
-      printf("Sent OK \n");
-      if (numbrBytes == -1)
-      {
-        perror("'OK' not gone through \n");
-      }
-    }
-
-    if (buf[0] == 'f')
-    {
-      sscanf(buf, "%s %lf %lf", oper, &dNumb1, &dNumb2);
-
-      if (strcmp(oper, "fadd") == 0)
-      {
-        dRes = dNumb1 + dNumb2;
-      }
-
-      else if (strcmp(oper, "fdiv") == 0)
-      {
-        dRes = dNumb1 / dNumb2;
-      }
-
-      else if (strcmp(oper, "fmul") == 0)
-      {
-        dRes = dNumb1 * dNumb2;
-      }
-
-      else if (strcmp(oper, "fsub") == 0)
-      {
-        dRes = dNumb1 - dNumb2;
-      }
-
-      sprintf(result, "%f\n", dRes);
-      numbrBytes = send(clientSocket, result, strlen(result), 0);
-      printf("Sent answer %s", result);
-      
-      if (numbrBytes == -1)
-      {
-        perror("Answer not gone through \n");
-      }
-    }
-    else if (buf[0] == 'a' || buf[0] == 'd' ||
-    buf[0] == 'm' || buf[0] == 's')
-    {
-      sscanf(buf, "%s %d %d", oper, &iNumb1, &iNumb2);
-
-      if (strcmp(oper, "add") == 0)
-      {
-        iRes = iNumb1 + iNumb2;
-      }
-
-      else if (strcmp(oper, "div") == 0)
-      {
-        iRes = iNumb1 / iNumb2;
-      }
-
-      else if (strcmp(oper, "mul") == 0)
-      {
-        iRes = iNumb1 * iNumb2;
-      }
-
-      else if (strcmp(oper, "sub") == 0)
-      {
-        iRes = iNumb1 - iNumb2;
-      }
-
-      sprintf(result, "%d\n", iRes);
-      numbrBytes = send(clientSocket, result, strlen(result), 0);
-      printf("Sent answer %s", result);
-
-      if (numbrBytes == -1)
-      {
-        perror("Answer not gone through \n");
-      }
-    }
-
-    if (buf[0] == 'O' || buf[0] == 'E')
-    {
-      exit(1);
+      perror("'OK' not gone through \n");
+      close(clientSocket);
     }
   }
+  else
+  {
+    printf("Protocol not supported\n");
+    close(clientSocket);
+  }
+
+  memset(&buf, 0, sizeof(buf));
+  numbrBytes = recv(clientSocket, buf, MAXDATA, 0);
+  if (numbrBytes == -1)
+  {
+    perror("Wrong with message \n");
+  }
+  if (numbrBytes == 0)
+  {
+    printf("Server closed down\n");
+    close(clientSocket);
+  }
+  else
+  {
+    printf("Client: Recieved '%s' \n", buf);
+  }
+
+  if (buf[0] == 'f')
+  {
+    sscanf(buf, "%s %lf %lf", oper, &dNumb1, &dNumb2);
+
+    if (strcmp(oper, "fadd") == 0)
+    {
+      dRes = dNumb1 + dNumb2;
+      printf("ASSIGNMENT: add %lf %lf\n", dNumb1, dNumb2);
+    }
+
+    else if (strcmp(oper, "fdiv") == 0)
+    {
+      dRes = dNumb1 / dNumb2;
+      printf("ASSIGNMENT: div %lf %lf\n", dNumb1, dNumb2);
+    }
+
+    else if (strcmp(oper, "fmul") == 0)
+    {
+      dRes = dNumb1 * dNumb2;
+      printf("ASSIGNMENT: mul %lf %lf\n", dNumb1, dNumb2);
+    }
+
+    else if (strcmp(oper, "fsub") == 0)
+    {
+      dRes = dNumb1 - dNumb2;
+      printf("ASSIGNMENT: sub %lf %lf\n", dNumb1, dNumb2);
+    }
+
+    sprintf(result, "%f\n", dRes);
+    numbrBytes = send(clientSocket, result, strlen(result), 0);
+    printf("Sent answer %s", result);
+      
+    if (numbrBytes == -1)
+    {
+      perror("Answer not gone through \n");
+    }
+  }
+  else if (buf[0] == 'a' || buf[0] == 'd' ||
+  buf[0] == 'm' || buf[0] == 's')
+  {
+    sscanf(buf, "%s %d %d", oper, &iNumb1, &iNumb2);
+
+    if (strcmp(oper, "add") == 0)
+    {
+      iRes = iNumb1 + iNumb2;
+      printf("ASSIGNMENT: add %d %d\n", iNumb1, iNumb2);
+    }
+
+    else if (strcmp(oper, "div") == 0)
+    {
+      iRes = iNumb1 / iNumb2;
+      printf("ASSIGNMENT: div %d %d\n", iNumb1, iNumb2);
+    }
+
+    else if (strcmp(oper, "mul") == 0)
+    {
+      iRes = iNumb1 * iNumb2;
+      printf("ASSIGNMENT: mul %d %d\n", iNumb1, iNumb2);
+    }
+
+    else if (strcmp(oper, "sub") == 0)
+    {
+      iRes = iNumb1 - iNumb2;
+      printf("ASSIGNMENT: sub %d %d\n", iNumb1, iNumb2);
+    }
+
+    sprintf(result, "%d\n", iRes);
+    numbrBytes = send(clientSocket, result, strlen(result), 0);
+    printf("Sent answer %s", result);
+
+    if (numbrBytes == -1)
+    {
+      perror("Answer not gone through \n");
+    }
+  }
+
+  memset(&buf, 0, sizeof(buf));
+  numbrBytes = recv(clientSocket, buf, MAXDATA, 0);
+  if (numbrBytes == -1)
+  {
+    perror("Wrong with message \n");
+  }
+  if (numbrBytes == 0)
+  {
+    printf("Server closed down\n");
+    close(clientSocket);
+  }
+  else
+  {
+    printf("Client: Recieved '%s' \n", buf);
+  }
+
+  if ((strcmp(buf, "OK\n") != 0) && (strcmp(buf, "ERROR\n") != 0))
+  {
+    printf("Not correct\n");
+    close(clientSocket);
+  }
+
   close(clientSocket);
 }
