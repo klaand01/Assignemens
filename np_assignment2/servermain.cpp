@@ -238,17 +238,20 @@ int main(int argc, char *argv[])
     printf("This is the main loop, %d times\n", loopcount);
     loopcount++;
     memset(cProtocol, 0, sizeof(*cProtocol));
-    numbytes = recvfrom(serverSocket, cProtocol, sizeof(*cProtocol), 0, 
-    (struct sockaddr *)&clientIn, & clientinSize);
-
-    if (numbytes < 0)
+    numbytes = recvfrom(serverSocket, cProtocol, sizeof(*cProtocol), 0, (struct sockaddr *)&clientIn, & clientinSize);
+    if (numbytes == -1)
     {
       perror("Message not received\n");
       close(serverSocket);
     }
+    if (numbytes == 0)
+    {
+      printf("Nothing received\n");
+    }
 
     if (numbytes == sizeof(calcMessage))
     {
+      printf("Calcmessage received\n");
       cMessage = (calcMessage *)cProtocol;
       calcMsgPrint(cMessage);
 
@@ -256,9 +259,9 @@ int main(int argc, char *argv[])
       cMessage->protocol != 17 || cMessage->type != 22)
       {
         numbytes = sendto(serverSocket, &notOkMsg, sizeof(calcMessage), 0, (struct sockaddr *)&clientIn, clientinSize);
-        if (numbytes < 0)
+        if (numbytes == -1)
         {
-          perror("Not ok message not sent\n");
+          perror("'Not ok' message not sent\n");
           break;
         }
         continue;
@@ -266,7 +269,6 @@ int main(int argc, char *argv[])
 
       clients[nrOfClients].clientInfo = &clientIn;
       clients[nrOfClients].ai_addrlen = sizeof(clientinSize);
-
 
       //Calculations
       char *oper = randomType();
@@ -356,7 +358,7 @@ int main(int argc, char *argv[])
       calcProtocolSend(tempProtocol);
 
       numbytes = sendto(serverSocket, tempProtocol, sizeof(*tempProtocol), 0, (struct sockaddr *)&clientIn, clientinSize);
-      if (numbytes < 0)
+      if (numbytes == -1)
       {
         perror("Could not send calcProtocol\n");
         break;
@@ -370,15 +372,14 @@ int main(int argc, char *argv[])
     }
     else if (numbytes == sizeof(calcProtocol))
     {
+      printf("Calcprotocol received\n");
       calcProtocolPrint(cProtocol);
 
-      inet_ntop(clientIn.ss_family, getAddr((struct sockaddr *)&clientIn), 
-      ipAddr2, sizeof(ipAddr2));
+      inet_ntop(clientIn.ss_family, getAddr((struct sockaddr *)&clientIn), ipAddr2, sizeof(ipAddr2));
 
       for (int i = 0; i < nrOfClients; i++)
       {
-        inet_ntop(clients[i].clientInfo->ss_family, getAddr((struct sockaddr *)clients[i].clientInfo),
-        ipAddr1, sizeof(ipAddr1));
+        inet_ntop(clients[i].clientInfo->ss_family, getAddr((struct sockaddr *)clients[i].clientInfo), ipAddr1, sizeof(ipAddr1));
 
         port1 = getPort((struct sockaddr *)&clientIn);
         port2 = getPort((struct sockaddr *)clients[i].clientInfo);
@@ -388,8 +389,22 @@ int main(int argc, char *argv[])
         if (clients[i].clientProtocol->id == cProtocol->id && strcmp(ipAddr1, ipAddr2) == 0 && found != true &&
         port1 == port2)
         {
+          printf("Client still the same\n");
           found = true;
           currentClient = i;
+        }
+        else
+        {
+          printf("Wrong client found\n");
+          numbytes = sendto(serverSocket, &notOkMsg, sizeof(calcMessage), 0, (struct sockaddr*)&clientIn, clientinSize);
+          if (numbytes == -1)
+          {
+            perror("Not ok message not sent\n");
+            break;
+          }
+
+          removeClient(i);
+          continue;
         }
       }
 
@@ -402,8 +417,9 @@ int main(int argc, char *argv[])
 
         if (dDiff < 0.0001 || iDiff < 0.0001)
         {
+          printf("Correct answer\n");
           numbytes = sendto(serverSocket, &okMsg, sizeof(calcMessage), 0, (struct sockaddr *)&clientIn, clientinSize);
-          if (numbytes < 0)
+          if (numbytes == -1)
           {
             perror("Answer not sent\n");
             break;
@@ -417,8 +433,9 @@ int main(int argc, char *argv[])
         }
         else
         {
+          printf("Not correct answer\n");
           numbytes = sendto(serverSocket, &notOkMsg, sizeof(calcMessage), 0, (struct sockaddr*)&clientIn, clientinSize);
-          if (numbytes < 0)
+          if (numbytes == -1)
           {
             perror("Correction not sent\n");
             break;
@@ -426,21 +443,12 @@ int main(int argc, char *argv[])
           continue;
         }
       }
-      else
-      {
-        numbytes = sendto(serverSocket, &notOkMsg, sizeof(calcMessage), 0, (struct sockaddr*)&clientIn, clientinSize);
-        if (numbytes < 0)
-        {
-          perror("Not ok message not sent\n");
-          break;
-        }
-        continue;
-      }
     }
     else
     {
+      printf("Wrong message received\n");
       numbytes = sendto(serverSocket, &notOkMsg, sizeof(calcMessage), 0, (struct sockaddr *)&clientIn, clientinSize);
-      if (numbytes < 0)
+      if (numbytes == -1)
       {
         perror("Not ok message not sent\n");
         break;
@@ -448,6 +456,7 @@ int main(int argc, char *argv[])
       continue;
     }
   }
+
   delete cProtocol;
   delete cMessage;
   delete tempProtocol;
