@@ -91,37 +91,36 @@ int main(int argc, char *argv[])
   printf("Connected to %s:%d local %s:%d \n", Desthost, port,
   myAdd, ntohs(sockAddrss.sin_port));
 
-
   memset(&buf, 0, sizeof(buf));
   numbrBytes = recv(clientSocket, buf, MAXDATA, 0);
   if (numbrBytes == -1)
   {
     perror("Wrong with message \n");
+    close(clientSocket);
+    exit(1);
   }
   if (numbrBytes == 0)
   {
     printf("Server closed down\n");
     close(clientSocket);
-  }
-  else
-  {
-    printf("Client: Recieved '%s' \n", buf);
+    exit(1);
   }
 
   if (strcmp(buf, "TEXT TCP 1.0\n\n") == 0)
   {
     numbrBytes = send(clientSocket, "OK\n", strlen("OK\n"), 0);
-    printf("Sent OK \n");
     if (numbrBytes == -1)
     {
       perror("'OK' not gone through \n");
       close(clientSocket);
+      exit(1);
     }
   }
   else
   {
     printf("Protocol not supported\n");
     close(clientSocket);
+    exit(1);
   }
 
   memset(&buf, 0, sizeof(buf));
@@ -129,15 +128,14 @@ int main(int argc, char *argv[])
   if (numbrBytes == -1)
   {
     perror("Wrong with message \n");
+    close(clientSocket);
+    exit(1);
   }
   if (numbrBytes == 0)
   {
     printf("Server closed down\n");
     close(clientSocket);
-  }
-  else
-  {
-    printf("Client: Recieved '%s' \n", buf);
+    exit(1);
   }
 
   if (buf[0] == 'f')
@@ -170,11 +168,13 @@ int main(int argc, char *argv[])
 
     sprintf(result, "%f\n", dRes);
     numbrBytes = send(clientSocket, result, strlen(result), 0);
-    printf("Sent answer %s", result);
+    printf("Answer: %s", result);
       
     if (numbrBytes == -1)
     {
       perror("Answer not gone through \n");
+      close(clientSocket);
+      exit(1);
     }
   }
   else if (buf[0] == 'a' || buf[0] == 'd' ||
@@ -208,11 +208,13 @@ int main(int argc, char *argv[])
 
     sprintf(result, "%d\n", iRes);
     numbrBytes = send(clientSocket, result, strlen(result), 0);
-    printf("Sent answer %s", result);
+    printf("Answer: %s", result);
 
     if (numbrBytes == -1)
     {
       perror("Answer not gone through \n");
+      close(clientSocket);
+      exit(1);
     }
   }
 
@@ -221,21 +223,23 @@ int main(int argc, char *argv[])
   if (numbrBytes == -1)
   {
     perror("Wrong with message \n");
+    close(clientSocket);
+    exit(1);
   }
   if (numbrBytes == 0)
   {
     printf("Server closed down\n");
     close(clientSocket);
+    exit(1);
   }
   else
   {
-    printf("Client: Recieved '%s' \n", buf);
+    printf("%s", buf);
   }
 
-  if ((strcmp(buf, "OK\n") != 0) && (strcmp(buf, "ERROR\n") != 0))
+  if ((strcmp(buf, "OK\n") != 0))
   {
     printf("Not correct\n");
-    close(clientSocket);
   }
 
   close(clientSocket);
