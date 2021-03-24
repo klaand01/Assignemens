@@ -106,6 +106,7 @@ int main(int argc, char *argv[])
   {
     perror("Wrong with message \n");
     close(clientSocket);
+    exit(1);
   }
   printf("Server: '%s' \n", buf);
 
@@ -117,6 +118,7 @@ int main(int argc, char *argv[])
   {
     perror("Protocol not supported, closing down \n");
     close(clientSocket);
+    exit(1);
   }  
 
   sprintf(buf, "NICK %s\n", name);
@@ -125,6 +127,7 @@ int main(int argc, char *argv[])
   {
     perror("Send not gone through \n");
     close(clientSocket);
+    exit(1);
   }
   printf("Sent name \n");
 
@@ -134,6 +137,7 @@ int main(int argc, char *argv[])
   {
     perror("Wrong with message \n");
     close(clientSocket);
+    exit(1);
   }
   printf("Server: '%s' \n", buf);
 
@@ -141,28 +145,30 @@ int main(int argc, char *argv[])
   {
     perror("Name not valid \n");
     close(clientSocket);
+    exit(1);
   }
 
   fd_set readfd;
   fd_set tempfd;
   FD_ZERO(&readfd);
   FD_ZERO(&tempfd);
-  FD_SET(STDIN, &tempfd);
-  FD_SET(clientSocket, &tempfd);
+  FD_SET(STDIN, &readfd);
+  FD_SET(clientSocket, &readfd);
 
   while (1)
   {
-    readfd = tempfd;
+    tempfd = readfd;
     memset(&buf, 0, sizeof(buf));
 
-    numbrBytes = select(clientSocket + 1, &readfd, NULL, NULL, NULL);
+    numbrBytes = select(clientSocket + 1, &tempfd, NULL, NULL, NULL);
     if (numbrBytes == -1)
     {
       printf("Wrong with select \n");
+      close(clientSocket);
       exit(1);
     }
 
-    if (FD_ISSET(STDIN, &readfd))
+    if (FD_ISSET(STDIN, &tempfd))
     {
       fgets(userInput, MAXDATA, stdin);
       sprintf(buf, "MSG %s", userInput);
@@ -171,23 +177,28 @@ int main(int argc, char *argv[])
       if (numbrBytes == -1)
       {
         perror("Send not gone through \n");
+        FD_CLR(clientSocket, &readfd);
+        close(clientSocket);
         exit(1);
       }
     }
 
-    if (FD_ISSET(clientSocket, &readfd))
+    if (FD_ISSET(clientSocket, &tempfd))
     {
       numbrBytes = recv(clientSocket, &buf, sizeof(buf), 0);
       if (numbrBytes == -1)
       {
         perror("Wrong with message \n");
+        FD_CLR(clientSocket, &readfd);
+        close(clientSocket);
         exit(1);
       }
       else if (numbrBytes == 0)
       {
         printf("Server closed down \n");
-        close(clientSocket);
         FD_CLR(clientSocket, &readfd);
+        close(clientSocket);
+        exit(1);
       }
       else
       {

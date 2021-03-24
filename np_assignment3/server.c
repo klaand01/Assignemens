@@ -111,22 +111,21 @@ int main(int argc, char *argv[])
   FD_ZERO(&tempfd);
   int maxfd;
   
-  FD_SET(serverSocket, &tempfd);
+  FD_SET(serverSocket, &readfd);
   maxfd = serverSocket;
 
   while (1)
   {
-    readfd = tempfd;
-    sentBytes = select(maxfd + 1, &readfd, NULL, NULL, NULL);
+    tempfd = readfd;
+    sentBytes = select(maxfd + 1, &tempfd, NULL, NULL, NULL);
     if (sentBytes == -1)
     {
       printf("Wrong with select \n");
-      exit(1);
     }
 
     for (int i = 0; i <= maxfd; i++)
     {
-      if (FD_ISSET(i, &readfd))
+      if (FD_ISSET(i, &tempfd))
       {
         if (i == serverSocket)
         {
@@ -137,7 +136,7 @@ int main(int argc, char *argv[])
             continue;
           }
 
-          FD_SET(clientSocket, &tempfd);
+          FD_SET(clientSocket, &readfd);
           if (clientSocket > maxfd)
           {
             maxfd = clientSocket;
@@ -181,10 +180,10 @@ int main(int argc, char *argv[])
           {
             sscanf(buf, "%s %s", type, arrNames[i]);
 
-            //Checking nickname, to have this in a function didn't work
+            //Checking nickname
             char *expression = "^[A-Za-z0-9_]+$";
             regex_t regex;
-            int ret;
+            int ret = 0;
 
             ret = regcomp(&regex, expression, REG_EXTENDED);
             if (ret != 0)
@@ -226,7 +225,7 @@ int main(int argc, char *argv[])
           if (strcmp(type, "MSG") == 0)
           {
             temp = strchr(buf, ' ');
-            sprintf(msg, "%s: %s", arrNames[i], temp);
+            sprintf(msg, "%s:%s", arrNames[i], temp);
 
             for (int j = 0; j <= maxfd; j++)
             {
