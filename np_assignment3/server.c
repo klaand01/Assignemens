@@ -26,7 +26,7 @@ void* getAddrs(struct sockaddr* addr)
 int main(int argc, char *argv[])
 {
   /* Do more magic */
-   if (argc != 2)
+  if (argc != 2)
   {
     printf("Usage: %s hostname:port (%d)\n", argv[0], argc);
     exit(1);
