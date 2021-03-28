@@ -121,7 +121,6 @@ int main(int argc, char *argv[])
     exit(1);
   }
 
-  
   //Calcprotocol calculations
   operNumbr = ntohl(proPtr->arith);
 

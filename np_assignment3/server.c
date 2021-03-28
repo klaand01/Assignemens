@@ -118,10 +118,6 @@ int main(int argc, char *argv[])
   {
     tempfd = readfd;
     sentBytes = select(maxfd + 1, &tempfd, NULL, NULL, NULL);
-    if (sentBytes == -1)
-    {
-      printf("Wrong with select \n");
-    }
 
     for (int i = 0; i <= maxfd; i++)
     {
@@ -189,6 +185,7 @@ int main(int argc, char *argv[])
             if (ret != 0)
             {
               perror("Could not compile regex.\n");
+              close(serverSocket);
               exit(1);
             }
 
@@ -206,6 +203,7 @@ int main(int argc, char *argv[])
               {
                 perror("Message not sent \n");
                 close(serverSocket);
+                exit(1);
               }
             }
             else
@@ -216,6 +214,7 @@ int main(int argc, char *argv[])
               {
                 perror("Message not sent \n");
                 close(serverSocket);
+                exit(1);
               }
             }
 

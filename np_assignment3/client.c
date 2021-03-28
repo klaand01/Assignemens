@@ -13,7 +13,6 @@
 
 int main(int argc, char *argv[])
 {
-  
   /* Do magic */
   
   if (argc != 3)
@@ -32,10 +31,10 @@ int main(int argc, char *argv[])
   //Checking nickname
   char *expression="^[A-Za-z0-9_]+$";
   regex_t regex;
-  int ret;
+  int ret = 0;
   
   ret = regcomp(&regex, expression, REG_EXTENDED);
-  if(ret)
+  if (ret != 0)
   {
     perror("Could not compile regex.\n");
     exit(1);
@@ -43,13 +42,12 @@ int main(int argc, char *argv[])
   
   int matches = 0;
   regmatch_t items;
-    
   
-  if(strlen(name) < 12)
+  if (strlen(name) < 12)
   {
     ret = regexec(&regex, name, matches, &items, 0);
 
-    if(ret == 0)
+    if (ret == 0)
     {
 	    printf("Nick %s is accepted.\n", name);
     }
@@ -62,6 +60,7 @@ int main(int argc, char *argv[])
   else
   {
     printf("%s is too long.\n", name);
+    exit(1);
   }
   
   regfree(&regex);
@@ -96,10 +95,10 @@ int main(int argc, char *argv[])
   {
     perror("Client not connected \n");
     close(clientSocket);
+    exit(1);
   }
   printf("Client connected \n");
   
-
   memset(&buf, 0, sizeof(buf));
   numbrBytes = recv(clientSocket, &buf, sizeof(buf), 0);
   if (numbrBytes == -1)
@@ -108,7 +107,7 @@ int main(int argc, char *argv[])
     close(clientSocket);
     exit(1);
   }
-  printf("Server: '%s' \n", buf);
+  printf("Server: %s \n", buf);
 
   if (strcmp(buf, "HELLO 1\n") == 0)
   {
@@ -116,7 +115,7 @@ int main(int argc, char *argv[])
   }
   else
   {
-    perror("Protocol not supported, closing down \n");
+    perror("Protocol not supported \n");
     close(clientSocket);
     exit(1);
   }  
@@ -139,7 +138,7 @@ int main(int argc, char *argv[])
     close(clientSocket);
     exit(1);
   }
-  printf("Server: '%s' \n", buf);
+  printf("Server: %s \n", buf);
 
   if (strcmp(buf, "OK\n") != 0)
   {
@@ -161,12 +160,6 @@ int main(int argc, char *argv[])
     memset(&buf, 0, sizeof(buf));
 
     numbrBytes = select(clientSocket + 1, &tempfd, NULL, NULL, NULL);
-    if (numbrBytes == -1)
-    {
-      printf("Wrong with select \n");
-      close(clientSocket);
-      exit(1);
-    }
 
     if (FD_ISSET(STDIN, &tempfd))
     {

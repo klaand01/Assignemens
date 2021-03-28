@@ -13,10 +13,9 @@
 #include <arpa/inet.h>
 //Included to get the support library
 #include <calcLib.h>
-
 #include "protocol.h"
-int loopcount = 0;
 
+int loopcount = 0;
 int nrOfClients = 0;
 int currentClient = 0;
 
@@ -41,7 +40,7 @@ void removeClient(int index)
 
 void checkJobList(int signum)
 {
-  printf("Let me be, I want to sleep\n");
+  printf("Checking clients\n");
 
   if (signum == SIGALRM)
   {
@@ -50,8 +49,9 @@ void checkJobList(int signum)
 
     for (int i = 0; i < nrOfClients; i++)
     {
-      if ((compTime.tv_sec - clients[i].time.tv_sec) >= 10)
+      if ((clients[i].time.tv_sec - compTime.tv_sec) >= 10)
       {
+        printf("HEJDÅ\n");
         removeClient(i);
         printf("Client removed\n");
       }
@@ -79,7 +79,7 @@ int getPort(struct sockaddr *addr)
   return ((struct sockaddr_in6*)addr)->sin6_port;
 }
 
-void calcMsgPrint(struct calcMessage* clientMsg)
+void cMessageNtoH(struct calcMessage* clientMsg)
 {
   clientMsg->type = ntohs(clientMsg->type);
   clientMsg->message = ntohl(clientMsg->message);
@@ -88,7 +88,7 @@ void calcMsgPrint(struct calcMessage* clientMsg)
   clientMsg->minor_version = ntohs(clientMsg->minor_version);
 }
 
-void calcMsgSend(struct calcMessage *serverMsg)
+void cMessageHtoN(struct calcMessage *serverMsg)
 {
   serverMsg->type = htons(serverMsg->type);
   serverMsg->message = htonl(serverMsg->message);
@@ -97,7 +97,7 @@ void calcMsgSend(struct calcMessage *serverMsg)
   serverMsg->minor_version = htons(serverMsg->minor_version);
 }
 
-void calcProtocolPrint(struct calcProtocol* clientMsg)
+void cProtocolNtoH(struct calcProtocol* clientMsg)
 {
   clientMsg->type = ntohs(clientMsg->type);
   clientMsg->major_version = ntohs(clientMsg->major_version);
@@ -109,7 +109,7 @@ void calcProtocolPrint(struct calcProtocol* clientMsg)
   clientMsg->inResult = ntohl(clientMsg->inResult);
 }
 
-void calcProtocolSend(calcProtocol *serverMsg)
+void cProtocolHtoN(calcProtocol *serverMsg)
 {
   serverMsg->type = htons(serverMsg->type);
   serverMsg->major_version = htons(serverMsg->major_version);
@@ -178,16 +178,17 @@ int main(int argc, char *argv[])
   okMsg.message = 1;
   okMsg.protocol = 17;
   okMsg.type = 2;
-  calcMsgSend(&okMsg);
+  cMessageHtoN(&okMsg);
   
   notOkMsg.major_version = 1;
   notOkMsg.minor_version = 0;
   notOkMsg.message = 2;
   notOkMsg.protocol = 17;
   notOkMsg.type = 2;
-  calcMsgSend(&notOkMsg);
+  cMessageHtoN(&notOkMsg);
 
-  if ((returnValue = getaddrinfo(Desthost, Destport, &addrs, &servinfo)) != 0)
+  returnValue = getaddrinfo(Desthost, Destport, &addrs, &servinfo);
+  if (returnValue != 0)
   {
     perror("Wrong with gettaddrinfo\n");
     exit(1);
@@ -195,19 +196,22 @@ int main(int argc, char *argv[])
 
   for (ptr = servinfo; ptr != NULL; ptr = ptr->ai_next)
   {
-    if ((serverSocket = socket(ptr->ai_family, ptr->ai_socktype, ptr->ai_protocol)) == -1)
+    serverSocket = socket(ptr->ai_family, ptr->ai_socktype, ptr->ai_protocol);
+    if (serverSocket == -1)
     {
       perror("Socket not created\n");
       exit(1);
     }
 
-    if (setsockopt(serverSocket, SOL_SOCKET, SO_REUSEADDR, &current, sizeof(int)) == -1)
+    returnValue = setsockopt(serverSocket, SOL_SOCKET, SO_REUSEADDR, &current, sizeof(current));
+    if (returnValue == -1)
     {
       perror("Wrong with setsocketopt\n");
       exit(1);
     }
 
-    if (bind(serverSocket, ptr->ai_addr, ptr->ai_addrlen) == -1)
+    returnValue = bind(serverSocket, ptr->ai_addr, ptr->ai_addrlen);
+    if (returnValue == -1)
     {
       perror("Could not bind\n");
       exit(1);
@@ -216,12 +220,12 @@ int main(int argc, char *argv[])
     break;
   }
 
-  if (ptr == NULL)
-  {
-    printf("Server failed to make a socket\n");
-    exit(1);
-  }
   freeaddrinfo(servinfo);
+  if (ptr == NULL)  
+  {
+		perror("Server: failed to bind \n");
+		exit(1);
+	}
 
   addrlen = sizeof(addrlen);
 
@@ -238,6 +242,7 @@ int main(int argc, char *argv[])
     printf("This is the main loop, %d times\n", loopcount);
     loopcount++;
     memset(cProtocol, 0, sizeof(*cProtocol));
+    
     numbytes = recvfrom(serverSocket, cProtocol, sizeof(*cProtocol), 0, (struct sockaddr *)&clientIn, & clientinSize);
     if (numbytes == -1)
     {
@@ -248,12 +253,27 @@ int main(int argc, char *argv[])
     {
       printf("Nothing received\n");
     }
+    else
+    {
+      printf("Message received\n");
+
+      struct timeval compTime;
+      gettimeofday(&compTime, NULL);
+
+      for (int i = 0; i < nrOfClients; i++)
+      {
+        if ((compTime.tv_sec - clients[i].time.tv_sec) >= 10)
+        {
+          removeClient(i);
+          printf("Client removed\n");
+        }
+      }
+    }
 
     if (numbytes == sizeof(calcMessage))
     {
-      printf("Calcmessage received\n");
       cMessage = (calcMessage *)cProtocol;
-      calcMsgPrint(cMessage);
+      cMessageNtoH(cMessage);
 
       if (cMessage->major_version != 1 || cMessage->message != 0 || cMessage->minor_version != 0 || 
       cMessage->protocol != 17 || cMessage->type != 22)
@@ -355,7 +375,7 @@ int main(int argc, char *argv[])
         }
       }
 
-      calcProtocolSend(tempProtocol);
+      cProtocolHtoN(tempProtocol);
 
       numbytes = sendto(serverSocket, tempProtocol, sizeof(*tempProtocol), 0, (struct sockaddr *)&clientIn, clientinSize);
       if (numbytes == -1)
@@ -368,12 +388,10 @@ int main(int argc, char *argv[])
         clients[nrOfClients].clientProtocol = tempProtocol;
         gettimeofday(&clients[nrOfClients++].time, NULL);
       }
-      continue;
     }
     else if (numbytes == sizeof(calcProtocol))
     {
-      printf("Calcprotocol received\n");
-      calcProtocolPrint(cProtocol);
+      cProtocolNtoH(cProtocol);
 
       inet_ntop(clientIn.ss_family, getAddr((struct sockaddr *)&clientIn), ipAddr2, sizeof(ipAddr2));
 
@@ -384,7 +402,7 @@ int main(int argc, char *argv[])
         port1 = getPort((struct sockaddr *)&clientIn);
         port2 = getPort((struct sockaddr *)clients[i].clientInfo);
 
-        calcProtocolPrint(clients[i].clientProtocol);
+        cProtocolNtoH(clients[i].clientProtocol);
 
         if (clients[i].clientProtocol->id == cProtocol->id && strcmp(ipAddr1, ipAddr2) == 0 && found != true &&
         port1 == port2)
@@ -395,7 +413,7 @@ int main(int argc, char *argv[])
         }
         else
         {
-          printf("Wrong client found\n");
+          printf("Wrong client\n");
           numbytes = sendto(serverSocket, &notOkMsg, sizeof(calcMessage), 0, (struct sockaddr*)&clientIn, clientinSize);
           if (numbytes == -1)
           {
