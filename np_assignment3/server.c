@@ -144,7 +144,7 @@ int main(int argc, char *argv[])
           myAdd = inet_ntop(theirAddrs.sin_family, getAddrs((struct sockaddr *)&theirAddrs), myAddress, sizeof(myAddress));
           printf("New connection from %s:%d \n", myAdd, ntohs(theirAddrs.sin_port));
 
-          sentBytes = send(clientSocket, "HELLO 1\n", strlen("HELLO 1\n"), 0);
+          sentBytes = send(clientSocket, "Hello 1\n", strlen("Hello 1\n"), 0);
           if (sentBytes == -1)
           {
             perror("Message not sent \n");
@@ -194,7 +194,7 @@ int main(int argc, char *argv[])
 
             ret = regexec(&regex, arrNames[i], matches, &items, 0);
 
-            if ((strlen(arrNames[i]) < 12) && (ret == 0))
+            if ((strlen(arrNames[i]) <= 12) && (ret == 0))
             {
               printf("Nickname is accepted \n");
 
@@ -224,14 +224,26 @@ int main(int argc, char *argv[])
           if (strcmp(type, "MSG") == 0)
           {
             temp = strchr(buf, ' ');
-            sprintf(msg, "%s:%s", arrNames[i], temp);
 
             for (int j = 0; j <= maxfd; j++)
             {
               if (FD_ISSET(j, &readfd))
               {
-                if (j != serverSocket)
+                if (j == i)
                 {
+                  sprintf(msg, "MSG %s %s", arrNames[i], temp);
+                  sentBytes = send(i, msg, strlen(msg), 0);
+                  if (sentBytes == -1)
+                  {
+                    perror("Message not sent \n");
+                    continue;
+                  }
+                }
+
+                if (j != serverSocket && j != i)
+                {
+                  sprintf(msg, "%s:%s", arrNames[i], temp);
+
                   sentBytes = send(j, msg, strlen(msg), 0);
                   if (sentBytes == -1)
                   {

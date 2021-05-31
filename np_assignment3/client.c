@@ -43,7 +43,7 @@ int main(int argc, char *argv[])
   int matches = 0;
   regmatch_t items;
   
-  if (strlen(name) < 12)
+  if (strlen(name) <= 12)
   {
     ret = regexec(&regex, name, matches, &items, 0);
 
@@ -53,13 +53,13 @@ int main(int argc, char *argv[])
     }
     else
     {
-	    printf("%s is not accepted.\n", name);
+	    printf("ERROR %s is not accepted \n", name);
       exit(1);
     }
   }
   else
   {
-    printf("%s is too long.\n", name);
+    printf("ERROR %s is too long \n", name);
     exit(1);
   }
   
@@ -107,9 +107,9 @@ int main(int argc, char *argv[])
     close(clientSocket);
     exit(1);
   }
-  printf("Server: %s \n", buf);
+  printf("%s \n", buf);
 
-  if (strcmp(buf, "HELLO 1\n") == 0)
+  if (strcmp(buf, "Hello 1\n") == 0)
   {
     printf("Protocol supported, sending nickname \n");
   }
@@ -138,7 +138,7 @@ int main(int argc, char *argv[])
     close(clientSocket);
     exit(1);
   }
-  printf("Server: %s \n", buf);
+  printf("%s \n", buf);
 
   if (strcmp(buf, "OK\n") != 0)
   {
