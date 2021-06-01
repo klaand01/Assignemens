@@ -65,15 +65,35 @@ int main(int argc, char *argv[])
   FD_SET(STDIN, &tempfd);
   FD_SET(clientSocket, &tempfd);
 
+  int timeCounter = 3;
+
   while (1)
   {
     readfd = tempfd;
-    numbrBytes = select(clientSocket + 1, &readfd, NULL, NULL, NULL);
-    if (numbrBytes == -1)
+    struct timeval timer;
+    timer.tv_sec = 1;
+    timer.tv_usec = 0;
+
+    selectBytes = select(clientSocket + 1, &readfd, NULL, NULL, &timer);
+    if (selectBytes == -1)
     {
       exit(1);
     }
 
+    if (selectBytes == 0)
+    {
+      if (strcmp(command, "COUNT") == 0)
+      {
+        printf("%d seconds to game\n", timeCounter--);
+      }
+
+      if (timeCounter == 0)
+      {
+        printf("Game is starting!\n");
+      }
+    }
+
+    //From the server
     if (FD_ISSET(clientSocket, &readfd))
     {
       memset(&buf, 0, sizeof(buf));
@@ -101,18 +121,13 @@ int main(int argc, char *argv[])
         printf("\n1. Play\n2. Watch\n0. Exit\n");
       }
 
-      if (strcmp(command, "MSG") == 0)
+      if (strcmp(command, "MSG") == 0 || strcmp(command, "START") == 0)
       {
         printf("%s\n", temp);
-      }
-
-      if (strcmp(command, "START") == 0)
-      {
-        printf("%s\n", temp);
-        numbrBytes = send(clientSocket, command, strlen(command), 0);
       }
     }
 
+    //From input
     if (FD_ISSET(STDIN, &readfd))
     {
       memset(&msg, 0, sizeof(msg));
@@ -121,8 +136,10 @@ int main(int argc, char *argv[])
 
       sprintf(msg, "%s %s\n", command, buf);
 
+      //Exit
       if (strcmp(buf, "0") == 0)
       {
+        printf("Exiting\n");
         close(clientSocket);
         FD_CLR(clientSocket, &readfd);
         exit(1);

@@ -25,20 +25,16 @@ void* getAddrs(struct sockaddr* addr)
   }
 }
 
-int nrPlayers = 0, counter = -1;
+int nrPlayers = 0;
 
 struct games
 {
   int player1;
   int player2;
+  int ready;
 };
 
 struct games players[100];
-
-int countDown(int index, int bytes)
-{
-  
-}
 
 int main(int argc, char *argv[])
 {
@@ -116,7 +112,7 @@ int main(int argc, char *argv[])
   struct sockaddr_in theirAddrs;
   socklen_t theirSize = sizeof(theirAddrs);
 
-  int clientSocket, bytes, clientCount = -1, readyCount = -1;
+  int clientSocket, bytes, clientCount = -1;
   char buf[MAXDATA], command[20], input[10];
 
   fd_set readfd;
@@ -146,10 +142,6 @@ int main(int argc, char *argv[])
     }
     
     //Select timed out
-    if (selectBytes == 0)
-    {
-
-    }
 
     for (int i = 0; i <= maxfd; i++)
     {
@@ -228,6 +220,7 @@ int main(int argc, char *argv[])
               {
                 printf("Starting game\n");
                 players[nrPlayers].player2 = i;
+                players[nrPlayers].ready = 0;
 
                 bytes = send(players[nrPlayers].player1, "START Press 'R' to start!\n", strlen("START Press 'R' to start!\n"), 0);
                 bytes = send(players[nrPlayers].player2, "START Press 'R' to start!\n", strlen("START Press 'R' to start!\n"), 0);
@@ -245,7 +238,7 @@ int main(int argc, char *argv[])
           //Client wants to leave queue
           if (strcmp(command, "MSG") == 0)
           {
-            bytes = send(clientSocket, "MENU\n", strlen("MENU\n"), 0);
+            bytes = send(i, "MENU\n", strlen("MENU\n"), 0);
             if (bytes == -1)
             {
               perror("Message not sent \n");
@@ -257,14 +250,22 @@ int main(int argc, char *argv[])
           //Players are ready
           if (strcmp(command, "START") == 0)
           {
-            readyCount++;
-            readyCount %= 2;
-
-            if (readyCount == 1)
+            for (int j = 0; j < nrPlayers; j++)
             {
+              if (players[j].player1 == i || players[j].player2 == i)
+              {
+                players[j].ready++;
 
-            }            
-          }     
+                if (players[j].ready == 2)
+                {
+                  send(players[j].player1, "COUNT\n", strlen("COUNT\n"), 0);
+                  send(players[j].player2, "COUNT\n", strlen("COUNT\n"), 0);
+                }
+
+                break;
+              }
+            }
+          }
         }
       }
     }
