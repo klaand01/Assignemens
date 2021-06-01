@@ -431,6 +431,7 @@ int main(int argc, char *argv[])
             }
           }
 
+          clients[i].sentMsg = false;
           removeClient(i);
         }
       }
