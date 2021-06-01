@@ -80,16 +80,20 @@ int main(int argc, char *argv[])
       exit(1);
     }
 
+    //Select timed out
     if (selectBytes == 0)
     {
       if (strcmp(command, "COUNT") == 0)
       {
         printf("%d seconds to game\n", timeCounter--);
-      }
 
-      if (timeCounter == 0)
-      {
-        printf("Game is starting!\n");
+        if (timeCounter == 0)
+        {
+          printf("Game is starting!\n");
+          printf("\n1. Rock\n2. Paper\n3. Scissor\n");
+          strcpy(command, "GAME");
+          numbrBytes = send(clientSocket, "GAME", strlen("GAME"), 0);
+        }
       }
     }
 

@@ -13,6 +13,28 @@
 
 #define MAXDATA 1000
 
+int nrPlayers = 0;
+char command[20];
+
+struct games
+{
+  int player1;
+  int player2;
+  int ready;
+
+  int answerP1;
+  int answerP2;
+
+  int scoreP1;
+  int scoreP2;
+
+  bool p1Answered;
+  bool p2Answered;
+  bool gameStarted;
+};
+
+struct games players[100];
+
 void* getAddrs(struct sockaddr* addr)
 {
   if (addr->sa_family == AF_INET)
@@ -25,16 +47,34 @@ void* getAddrs(struct sockaddr* addr)
   }
 }
 
-int nrPlayers = 0;
-
-struct games
+void checkWhoWon(int player1, int player2, int index)
 {
-  int player1;
-  int player2;
-  int ready;
-};
+  strcpy(command, "RESULT");
 
-struct games players[100];
+  if (abs(players[index].answerP1 - players[index].answerP2) == 2)
+  {
+    if (players[index].answerP1 > players[index].answerP2)
+    {
+      players[index].scoreP1++;
+    }
+    else
+    {
+      players[index].scoreP2++;
+    }
+  }
+
+  if (abs(players[index].answerP1 - players[index].answerP2) == 1)
+  {
+    if (players[index].answerP1 > players[index].answerP2)
+    {
+      players[index].scoreP1++;
+    }
+    else
+    {
+      players[index].scoreP2++;
+    }
+  }
+}
 
 int main(int argc, char *argv[])
 {
@@ -113,7 +153,7 @@ int main(int argc, char *argv[])
   socklen_t theirSize = sizeof(theirAddrs);
 
   int clientSocket, bytes, clientCount = -1;
-  char buf[MAXDATA], command[20], input[10];
+  char buf[MAXDATA], input[10];
 
   fd_set readfd;
   fd_set tempfd;
@@ -129,7 +169,7 @@ int main(int argc, char *argv[])
   while (1)
   {
     struct timeval timer;
-    timer.tv_sec = 1;
+    timer.tv_sec = 2;
     timer.tv_usec = 0;
 
     memset(&buf, 0, sizeof(buf));
@@ -142,6 +182,35 @@ int main(int argc, char *argv[])
     }
     
     //Select timed out
+    if (selectBytes == 0)
+    {
+      if (strcmp(command, "GAME") == 0)
+      {        
+        for (int i = 0; i < nrPlayers; i++)
+        {
+          if (players[i].gameStarted)
+          {
+            if (players[i].p1Answered && !players[i].p2Answered)
+            {
+              players[i].scoreP1++;
+              bytes = send(players[i].player2, "MSG Too long to answer, you lose\n", strlen("MSG Too long to answer, you lose\n"), 0);
+            }
+
+            if (players[i].p2Answered && !players[i].p1Answered)
+            {
+              players[i].scoreP2++;
+              bytes = send(players[i].player1, "MSG Too long to answer, you lose\n", strlen("MSG Too long to answer, you lose\n"), 0);
+            }
+
+            if (!players[i].p1Answered && !players[i].p2Answered)
+            {
+              bytes = send(players[i].player1, "MSG No one answered, draw\n", strlen("MSG No one answered, drawn"), 0);
+              bytes = send(players[i].player2, "MSG No one answered, draw\n", strlen("MSG No one answered, drawn"), 0);
+            }
+          }
+        }
+      }
+    }
 
     for (int i = 0; i <= maxfd; i++)
     {
@@ -221,6 +290,16 @@ int main(int argc, char *argv[])
                 printf("Starting game\n");
                 players[nrPlayers].player2 = i;
                 players[nrPlayers].ready = 0;
+                
+                players[nrPlayers].answerP1 = 0;
+                players[nrPlayers].answerP2 = 0;
+                
+                players[nrPlayers].scoreP1 = 0;
+                players[nrPlayers].scoreP2 = 0;
+
+                players[nrPlayers].p1Answered = false;
+                players[nrPlayers].p2Answered = false;
+                players[nrPlayers].gameStarted = false;
 
                 bytes = send(players[nrPlayers].player1, "START Press 'R' to start!\n", strlen("START Press 'R' to start!\n"), 0);
                 bytes = send(players[nrPlayers].player2, "START Press 'R' to start!\n", strlen("START Press 'R' to start!\n"), 0);
@@ -260,9 +339,40 @@ int main(int argc, char *argv[])
                 {
                   send(players[j].player1, "COUNT\n", strlen("COUNT\n"), 0);
                   send(players[j].player2, "COUNT\n", strlen("COUNT\n"), 0);
+                  players[j].gameStarted = true;
+                  players[j].ready = 0;
                 }
 
                 break;
+              }
+            }
+          }
+
+          if (strcmp(command, "GAME") == 0)
+          {
+            if (strcmp(input, "1") == 0 || strcmp(input, "2") == 0 || strcmp(input, "3") == 0)
+            {
+              for (int j = 0; j < nrPlayers; j++)
+              {
+                if (players[j].player1 == i)
+                {
+                  players[j].ready++;
+                  players[j].answerP1 = atoi(input);
+                  players[j].p1Answered = true;
+                }
+
+                if (players[j].player2 == i)
+                {
+                  players[j].ready++;
+                  players[j].answerP2 = atoi(input);
+                  players[j].p2Answered = true;
+                }
+
+                if (players[j].ready == 2)
+                {
+                  checkWhoWon(players[j].player1, players[j].player2, j);
+                  players[j].ready = 0;
+                }
               }
             }
           }
