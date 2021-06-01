@@ -95,18 +95,40 @@ int main(int argc, char *argv[])
         temp = strchr(buf, ' ');
       }
 
+      //Commands
       if (strcmp(command, "MENU") == 0)
       {
-        printf("\n1. Play\n2. Watch\n3. Exit\n");
+        printf("\n1. Play\n2. Watch\n0. Exit\n");
+      }
+
+      if (strcmp(command, "MSG") == 0)
+      {
+        printf("%s\n", temp);
+      }
+
+      if (strcmp(command, "START") == 0)
+      {
+        printf("%s\n", temp);
+        numbrBytes = send(clientSocket, command, strlen(command), 0);
       }
     }
 
     if (FD_ISSET(STDIN, &readfd))
     {
+      memset(&msg, 0, sizeof(msg));
       memset(&buf, 0, sizeof(buf));
       scanf("%s", buf);
 
-      numbrBytes = send(clientSocket, buf, strlen(buf), 0);
+      sprintf(msg, "%s %s\n", command, buf);
+
+      if (strcmp(buf, "0") == 0)
+      {
+        close(clientSocket);
+        FD_CLR(clientSocket, &readfd);
+        exit(1);
+      }
+
+      numbrBytes = send(clientSocket, msg, strlen(msg), 0);
       if (numbrBytes == -1)
       {
         perror("Wrong with menu send\n");

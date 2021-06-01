@@ -25,17 +25,15 @@ void* getAddrs(struct sockaddr* addr)
   }
 }
 
-int totalRounds = 0, nrGames = 0, nrWatches = 0;
-int playerCounter = 0, counter = -1;
-int answers[2], players[2], playersWatch[50];;
-bool watches = false;
+int nrPlayers = 0, counter = -1;
 
 struct games
 {
-
+  int player1;
+  int player2;
 };
 
-struct games activePlayers[100];
+struct games players[100];
 
 int countDown(int index, int bytes)
 {
@@ -118,7 +116,7 @@ int main(int argc, char *argv[])
   struct sockaddr_in theirAddrs;
   socklen_t theirSize = sizeof(theirAddrs);
 
-  int clientSocket, bytes, clientCount = -1;
+  int clientSocket, bytes, clientCount = -1, readyCount = -1;
   char buf[MAXDATA], command[20], input[10];
 
   fd_set readfd;
@@ -208,7 +206,65 @@ int main(int argc, char *argv[])
             sscanf(buf, "%s %s", command, input);
           }
 
-          
+          if (strcmp(command, "MENU") == 0)
+          {
+            //Client chose "Play"
+            if (strcmp(input, "1") == 0)
+            {
+              clientCount++;
+              clientCount %= 2;
+
+              if (clientCount != 1)
+              {
+                bytes = send(i, "MSG Waiting for opponent...\nPress 'Q' to go back\n", strlen("MSG Waiting for opponent...\nPress 'Q' to go back\n"), 0);
+                players[nrPlayers].player1 = i;
+
+                if (bytes == -1)
+                {
+                  perror("Message not sent\n");
+                }
+              }
+              else
+              {
+                printf("Starting game\n");
+                players[nrPlayers].player2 = i;
+
+                bytes = send(players[nrPlayers].player1, "START Press 'R' to start!\n", strlen("START Press 'R' to start!\n"), 0);
+                bytes = send(players[nrPlayers].player2, "START Press 'R' to start!\n", strlen("START Press 'R' to start!\n"), 0);
+
+                if (bytes == -1)
+                {
+                  perror("Message not sent\n");
+                }
+
+                nrPlayers++;
+              }
+            }
+          }
+
+          //Client wants to leave queue
+          if (strcmp(command, "MSG") == 0)
+          {
+            bytes = send(clientSocket, "MENU\n", strlen("MENU\n"), 0);
+            if (bytes == -1)
+            {
+              perror("Message not sent \n");
+            }
+
+            clientCount--;
+          }
+
+          //Players are ready
+          if (strcmp(command, "START") == 0)
+          {
+            readyCount++;
+            readyCount %= 2;
+
+            if (readyCount == 1)
+            {
+
+            }            
+          }     
         }
       }
     }
