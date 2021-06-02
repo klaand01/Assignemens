@@ -285,6 +285,12 @@ int main(int argc, char *argv[])
           if (bytes == 0)
           {
             printf("Client hung up \n");
+
+            if (FD_ISSET(players[nrPlayers].player1, &readfd))
+            {
+              clientCount--;
+            }
+
             close(i);
             FD_CLR(i, &tempfd);
           }
@@ -415,7 +421,7 @@ int main(int argc, char *argv[])
 
             for (int j = 0; j < nrPlayers; j++)
             {
-              if (players[j].gameStarted)
+              if (players[j].player1 == i)
               {
                 if (players[j].scoreP1 == 3)
                 {
@@ -434,8 +440,8 @@ int main(int argc, char *argv[])
                   players[j].scoreP1 = 0;
                   players[j].scoreP2 = 0;
 
-                  sprintf(msgP1, "RESULT No one won, starting over\nScore: %d -- %d\n", players[j].scoreP1, players[j].scoreP2);
-                  sprintf(msgP2, "RESULT No one won, starting over\nScore: %d -- %d\n", players[j].scoreP1, players[j].scoreP2);
+                  sprintf(msgP1, "RESULT Match draw, starting over\nScore: %d -- %d\n", players[j].scoreP1, players[j].scoreP2);
+                  sprintf(msgP2, "RESULT Match draw, starting over\nScore: %d -- %d\n", players[j].scoreP1, players[j].scoreP2);
                 }
 
                 send(players[j].player1, msgP1, strlen(msgP1), 0);
