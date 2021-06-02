@@ -93,14 +93,16 @@ int main(int argc, char *argv[])
         }
         else
         {
-          printf("%d seconds to game\n", timeCounter--);
-
           if (timeCounter == 0)
           {
             printf("\nRound %d\n", round++);
             printf("\n1. Rock\n2. Paper\n3. Scissor\n");
             strcpy(command, "GAME");
             numbrBytes = send(clientSocket, "GAME", strlen("GAME"), 0);
+          }
+          else
+          {
+            printf("%d seconds to game\n", timeCounter--);
           }
         }
       }
