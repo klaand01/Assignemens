@@ -65,7 +65,7 @@ int main(int argc, char *argv[])
   FD_SET(STDIN, &tempfd);
   FD_SET(clientSocket, &tempfd);
 
-  int timeCounter = 3;
+  int timeCounter = 3, round = 1;
 
   while (1)
   {
@@ -85,14 +85,23 @@ int main(int argc, char *argv[])
     {
       if (strcmp(command, "COUNT") == 0)
       {
-        printf("%d seconds to game\n", timeCounter--);
-
-        if (timeCounter == 0)
+        if (round == 4)
         {
-          printf("Game is starting!\n");
-          printf("\n1. Rock\n2. Paper\n3. Scissor\n");
+          numbrBytes = send(clientSocket, "OVER", strlen("OVER"), 0);
           strcpy(command, "GAME");
-          numbrBytes = send(clientSocket, "GAME", strlen("GAME"), 0);
+          round = 1;
+        }
+        else
+        {
+          printf("%d seconds to game\n", timeCounter--);
+
+          if (timeCounter == 0)
+          {
+            printf("\nRound %d\n", round++);
+            printf("\n1. Rock\n2. Paper\n3. Scissor\n");
+            strcpy(command, "GAME");
+            numbrBytes = send(clientSocket, "GAME", strlen("GAME"), 0);
+          }
         }
       }
     }
@@ -122,12 +131,26 @@ int main(int argc, char *argv[])
       //Commands
       if (strcmp(command, "MENU") == 0)
       {
-        printf("\n1. Play\n2. Watch\n0. Exit\n");
+        if (temp != NULL)
+        {
+          printf("%s\n\n1. Play\n2. Watch\n0. Exit\n", temp);
+        }
+        else
+        {
+          printf("\n1. Play\n2. Watch\n0. Exit\n");
+        }
       }
 
       if (strcmp(command, "MSG") == 0 || strcmp(command, "START") == 0)
       {
         printf("%s\n", temp);
+      }
+
+      if (strcmp(command, "RESULT") == 0)
+      {
+        printf("%s\n", temp);
+        timeCounter = 3;
+        strcpy(command, "COUNT");
       }
     }
 

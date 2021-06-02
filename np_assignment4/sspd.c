@@ -11,25 +11,18 @@
 #include <string.h>
 #include <stdbool.h>
 
-#define MAXDATA 1000
+#define MAXDATA 255
 
 int nrPlayers = 0;
-char command[20];
+char command[20], msgP1[MAXDATA], msgP2[MAXDATA];
 
 struct games
 {
-  int player1;
-  int player2;
-  int ready;
+  int player1, player2;
+  int answerP1, answerP2;
+  int scoreP1, scoreP2;
 
-  int answerP1;
-  int answerP2;
-
-  int scoreP1;
-  int scoreP2;
-
-  bool p1Answered;
-  bool p2Answered;
+  bool readyP1, readyP2;
   bool gameStarted;
 };
 
@@ -49,31 +42,46 @@ void* getAddrs(struct sockaddr* addr)
 
 void checkWhoWon(int player1, int player2, int index)
 {
-  strcpy(command, "RESULT");
+  int bytes;
+  memset(&msgP1, 0, sizeof(msgP1));
+  memset(&msgP2, 0, sizeof(msgP2));
 
+  
   if (abs(players[index].answerP1 - players[index].answerP2) == 2)
   {
-    if (players[index].answerP1 > players[index].answerP2)
+    if (players[index].answerP1 < players[index].answerP2)
     {
       players[index].scoreP1++;
+      sprintf(msgP1, "RESLUT You won!\nScore: %d -- %d\n", players[index].scoreP1, players[index].scoreP2);
+      sprintf(msgP2, "RESULT You lost\nScore: %d -- %d\n", players[index].scoreP1, players[index].scoreP2);
     }
     else
     {
       players[index].scoreP2++;
+      sprintf(msgP2, "RESLUT You won!\nScore: %d -- %d\n", players[index].scoreP1, players[index].scoreP2);
+      sprintf(msgP1, "RESULT You lost\nScore: %d -- %d\n", players[index].scoreP1, players[index].scoreP2);
     }
   }
 
   if (abs(players[index].answerP1 - players[index].answerP2) == 1)
   {
-    if (players[index].answerP1 > players[index].answerP2)
+    if (players[index].answerP1 < players[index].answerP2)
     {
       players[index].scoreP1++;
+      sprintf(msgP1, "RESLUT You won!\nScore: %d -- %d\n", players[index].scoreP1, players[index].scoreP2);
+      sprintf(msgP2, "RESULT You lost\nScore: %d -- %d\n", players[index].scoreP1, players[index].scoreP2);
     }
     else
     {
       players[index].scoreP2++;
+      sprintf(msgP2, "RESLUT You won!\nScore: %d -- %d\n", players[index].scoreP1, players[index].scoreP2);
+      sprintf(msgP1, "RESULT You lost\nScore: %d -- %d\n", players[index].scoreP1, players[index].scoreP2);
     }
   }
+
+  bytes = send(players[index].player1, msgP1, strlen(msgP1), 0);
+  bytes = send(players[index].player2, msgP2, strlen(msgP2), 0);
+  strcpy(command, "RESULT");
 }
 
 int main(int argc, char *argv[])
@@ -84,12 +92,14 @@ int main(int argc, char *argv[])
     exit(1);
   }
 
-  char delim[]=":";
-  char *Desthost=strtok(argv[1],delim);
-  char *Destport=strtok(NULL,delim);
+  char delim[] = ":";
+  char *Desthost = strtok(argv[1],delim);
+  char *Destport = strtok(NULL,delim);
 
-  int port=atoi(Destport);
+  int port = atoi(Destport);
   printf("Host %s, and port %d. \n", Desthost, port);
+
+  /* My magic */
 
   int serverSocket, returnValue;
   int current = 1;
@@ -185,30 +195,46 @@ int main(int argc, char *argv[])
     if (selectBytes == 0)
     {
       if (strcmp(command, "GAME") == 0)
-      {        
+      {
         for (int i = 0; i < nrPlayers; i++)
         {
           if (players[i].gameStarted)
           {
-            if (players[i].p1Answered && !players[i].p2Answered)
+            memset(&msgP1, 0, sizeof(msgP1));
+            memset(&msgP2, 0, sizeof(msgP2));
+
+            if (players[i].readyP1 && !players[i].readyP2)
             {
               players[i].scoreP1++;
-              bytes = send(players[i].player2, "MSG Too long to answer, you lose\n", strlen("MSG Too long to answer, you lose\n"), 0);
+              sprintf(msgP1, "RESULT You won!\nScore: %d -- %d\n", players[i].scoreP1, players[i].scoreP2);
+              sprintf(msgP2, "RESULT Too long to answer, you lose\nScore: %d -- %d\n", players[i].scoreP1, players[i].scoreP2);
             }
 
-            if (players[i].p2Answered && !players[i].p1Answered)
+            if (players[i].readyP2 && !players[i].readyP1)
             {
               players[i].scoreP2++;
-              bytes = send(players[i].player1, "MSG Too long to answer, you lose\n", strlen("MSG Too long to answer, you lose\n"), 0);
+              sprintf(msgP2, "RESULT You won!\nScore: %d -- %d\n", players[i].scoreP1, players[i].scoreP2);
+              sprintf(msgP1, "RESULT Too long to answer, you lose\nScore: %d -- %d\n", players[i].scoreP1, players[i].scoreP2);
             }
 
-            if (!players[i].p1Answered && !players[i].p2Answered)
+            if (!players[i].readyP1 && !players[i].readyP2)
             {
-              bytes = send(players[i].player1, "MSG No one answered, draw\n", strlen("MSG No one answered, drawn"), 0);
-              bytes = send(players[i].player2, "MSG No one answered, draw\n", strlen("MSG No one answered, drawn"), 0);
+              sprintf(msgP1, "RESULT No one answered, draw\nScore: %d -- %d\n", players[i].scoreP1, players[i].scoreP2);
+              sprintf(msgP2, "RESULT No one answered, draw\nScore: %d -- %d\n", players[i].scoreP1, players[i].scoreP2);
             }
+
+            bytes = send(players[i].player1, msgP1, strlen(msgP1), 0);
+            bytes = send(players[i].player2, msgP2, strlen(msgP2), 0);
+
+            players[i].answerP1 = 0;
+            players[i].answerP2 = 0;
+
+            players[i].readyP1 = false;
+            players[i].readyP2 = false;
           }
         }
+
+        strcpy(command, "RESULT");
       }
     }
 
@@ -289,7 +315,8 @@ int main(int argc, char *argv[])
               {
                 printf("Starting game\n");
                 players[nrPlayers].player2 = i;
-                players[nrPlayers].ready = 0;
+                players[nrPlayers].readyP1 = false;
+                players[nrPlayers].readyP2 = false;
                 
                 players[nrPlayers].answerP1 = 0;
                 players[nrPlayers].answerP2 = 0;
@@ -297,8 +324,6 @@ int main(int argc, char *argv[])
                 players[nrPlayers].scoreP1 = 0;
                 players[nrPlayers].scoreP2 = 0;
 
-                players[nrPlayers].p1Answered = false;
-                players[nrPlayers].p2Answered = false;
                 players[nrPlayers].gameStarted = false;
 
                 bytes = send(players[nrPlayers].player1, "START Press 'R' to start!\n", strlen("START Press 'R' to start!\n"), 0);
@@ -331,19 +356,23 @@ int main(int argc, char *argv[])
           {
             for (int j = 0; j < nrPlayers; j++)
             {
-              if (players[j].player1 == i || players[j].player2 == i)
+              if (players[j].player1 == i)
               {
-                players[j].ready++;
+                players[j].readyP1 = true;
+              }
 
-                if (players[j].ready == 2)
-                {
-                  send(players[j].player1, "COUNT\n", strlen("COUNT\n"), 0);
-                  send(players[j].player2, "COUNT\n", strlen("COUNT\n"), 0);
-                  players[j].gameStarted = true;
-                  players[j].ready = 0;
-                }
+              if (players[j].player2 == i)
+              {
+                players[j].readyP2 = true;
+              }
 
-                break;
+              if (players[j].readyP1 && players[j].readyP2)
+              {
+                send(players[j].player1, "COUNT\n", strlen("COUNT\n"), 0);
+                send(players[j].player2, "COUNT\n", strlen("COUNT\n"), 0);
+                players[j].gameStarted = true;
+                players[j].readyP1 = false;
+                players[j].readyP2 = false;
               }
             }
           }
@@ -356,25 +385,65 @@ int main(int argc, char *argv[])
               {
                 if (players[j].player1 == i)
                 {
-                  players[j].ready++;
                   players[j].answerP1 = atoi(input);
-                  players[j].p1Answered = true;
+                  players[j].readyP1 = true;
                 }
 
                 if (players[j].player2 == i)
                 {
-                  players[j].ready++;
                   players[j].answerP2 = atoi(input);
-                  players[j].p2Answered = true;
+                  players[j].readyP2 = true;
                 }
 
-                if (players[j].ready == 2)
+                if (players[j].readyP1 && players[j].readyP2)
                 {
                   checkWhoWon(players[j].player1, players[j].player2, j);
-                  players[j].ready = 0;
+                  players[j].readyP1 = false;
+                  players[j].readyP2 = false;
+
+                  players[j].answerP1 = 0;
+                  players[j].answerP2 = 0;
                 }
               }
             }
+          }
+
+          if (strcmp(command, "OVER") == 0)
+          {
+            memset(&msgP1, 0, sizeof(msgP1));
+            memset(&msgP2, 0, sizeof(msgP2));
+
+            for (int j = 0; j < nrPlayers; j++)
+            {
+              if (players[j].gameStarted)
+              {
+                if (players[j].scoreP1 == 3)
+                {
+                  sprintf(msgP1, "MENU Congratulations you won the game!\nScore: %d -- %d\n", players[j].scoreP1, players[j].scoreP2);
+                  sprintf(msgP2, "MENU Unfortunately you lost the game\nScore: %d -- %d\n", players[j].scoreP1, players[j].scoreP2);
+                }
+
+                if (players[j].scoreP2 == 3)
+                {
+                  sprintf(msgP2, "MENU Congratulations you won the game!\nScore: %d -- %d\n", players[j].scoreP1, players[j].scoreP2);
+                  sprintf(msgP1, "MENU Unfortunately you lost the game\nScore: %d -- %d\n", players[j].scoreP1, players[j].scoreP2);
+                }
+
+                if (players[j].scoreP1 != 3 && players[j].scoreP2 != 3)
+                {
+                  players[j].scoreP1 = 0;
+                  players[j].scoreP2 = 0;
+
+                  sprintf(msgP1, "RESULT No one won, starting over\nScore: %d -- %d\n", players[j].scoreP1, players[j].scoreP2);
+                  sprintf(msgP2, "RESULT No one won, starting over\nScore: %d -- %d\n", players[j].scoreP1, players[j].scoreP2);
+                }
+
+                send(players[j].player1, msgP1, strlen(msgP1), 0);
+                send(players[j].player2, msgP2, strlen(msgP2), 0);
+              }
+            }
+
+            strcpy(command, "RESULT");
           }
         }
       }
