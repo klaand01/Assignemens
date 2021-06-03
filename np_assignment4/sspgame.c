@@ -8,7 +8,7 @@
 #include <sys/time.h>
 #include <stdbool.h>
 
-#define MAXDATA 1000
+#define MAXDATA 100
 #define STDIN 0
 
 int main(int argc, char *argv[])
@@ -154,6 +154,17 @@ int main(int argc, char *argv[])
         timeCounter = 3;
         strcpy(command, "COUNT");
       }
+
+      if (strcmp(command, "CHOICE") == 0)
+      {
+        printf("%s\n", temp);
+      }
+
+      if (strcmp(command, "Game") == 0)
+      {
+        printf("%s\n", buf);
+        strcpy(command, "CHOICE");
+      }
     }
 
     //From input
@@ -161,10 +172,10 @@ int main(int argc, char *argv[])
     {
       memset(&msg, 0, sizeof(msg));
       memset(&buf, 0, sizeof(buf));
+      
       scanf("%s", buf);
-
       sprintf(msg, "%s %s\n", command, buf);
-
+      
       //Exit
       if (strcmp(buf, "0") == 0)
       {
