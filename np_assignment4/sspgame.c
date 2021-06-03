@@ -83,12 +83,21 @@ int main(int argc, char *argv[])
     //Select timed out
     if (selectBytes == 0)
     {
-      if (strcmp(command, "COUNT") == 0)
+      if (strcmp(command, "COUNT") == 0 || strcmp(command, "W-COUNT") == 0)
       {
         if (round == 4)
         {
           numbrBytes = send(clientSocket, "OVER", strlen("OVER"), 0);
-          strcpy(command, "GAME");
+
+          if (strcmp(command, "COUNT") == 0)
+          {
+            strcpy(command, "GAME");
+          }
+          else
+          {
+            strcpy(command, "W");
+          }
+          
           round = 1;
         }
         else
@@ -97,7 +106,16 @@ int main(int argc, char *argv[])
           {
             printf("\nRound %d\n", round++);
             printf("\n1. Rock\n2. Paper\n3. Scissor\n");
-            strcpy(command, "GAME");
+
+            if (strcmp(command, "COUNT") == 0)
+            {
+              strcpy(command, "GAME");
+            }
+            else
+            {
+              strcpy(command, "W");
+            }
+
             numbrBytes = send(clientSocket, "GAME", strlen("GAME"), 0);
           }
           else
@@ -130,7 +148,7 @@ int main(int argc, char *argv[])
         temp = strchr(buf, ' ');
       }
 
-      //Commands
+      //Commands "Play"
       if (strcmp(command, "MENU") == 0)
       {
         if (temp != NULL)
@@ -150,20 +168,30 @@ int main(int argc, char *argv[])
 
       if (strcmp(command, "RESULT") == 0)
       {
-        printf("%s\n", temp);
         timeCounter = 3;
+        printf("%s\n", temp);
         strcpy(command, "COUNT");
       }
 
-      if (strcmp(command, "CHOICE") == 0)
-      {
-        printf("%s\n", temp);
-      }
-
+      
+      //Commands "Watch"
       if (strcmp(command, "Game") == 0)
       {
         printf("%s\n", buf);
         strcpy(command, "CHOICE");
+      }
+
+      if (strcmp(command, "W-MENU") == 0)
+      {
+        printf("%s\n", temp);
+        strcpy(command, "WATCH"); //Inte färdig
+      }
+
+      if (strcmp(command, "W-RESULT") == 0)
+      {
+        timeCounter = 3;
+        printf("%s\n", temp);
+        strcpy(command, "W-COUNT");
       }
     }
 
