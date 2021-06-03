@@ -316,27 +316,35 @@ int main(int argc, char *argv[])
                 if (players[j].player1 == i)
                 {
                   memset(&msgP2, 0, sizeof(msgP2));
+                  memset(&msgWatch, 0, sizeof(msgWatch));
                   sprintf(msgP2, "MENU Player 1 disconnected, ending game\n");
+                  sprintf(msgWatch, "W-MENU Player 1 disconnected, ending watch\n");
+
                   bytes = send(players[j].player2, msgP2, strlen(msgP2), 0);
+                  bytes = send(watchers[j], msgWatch, strlen(msgWatch), 0);
 
                   for (int k = j; k < nrPlayers - 1; k++)
                   {
                     players[k] = players[k + 1];
+                    watchers[k] = watchers[k + 1];
                   }
                   nrPlayers--;
-
-                  //Send watchers back to menu
                 }
 
                 if (players[j].player2 == i)
                 {
                   memset(&msgP1, 0, sizeof(msgP1));
+                  memset(&msgWatch, 0, sizeof(msgWatch));
                   sprintf(msgP1, "MENU Player 2 disconnected, ending game\n");
+                  sprintf(msgWatch, "W-MENU Player 2 disconnected, ending watch\n");
+
                   bytes = send(players[j].player1, msgP1, strlen(msgP1), 0);
+                  bytes = send(watchers[j], msgWatch, strlen(msgWatch), 0);
 
                   for (int k = j; k < nrPlayers - 1; k++)
                   {
                     players[k] = players[k + 1];
+                    watchers[k] = watchers[k + 1];
                   }
                   nrPlayers--;
                 }
@@ -439,13 +447,21 @@ int main(int argc, char *argv[])
           {
             memset(&msgWatch, 0, sizeof(msgWatch));
 
-            for (int j = 0; j < nrPlayers; j++)
+            if (nrPlayers == 0)
             {
-              if (watchers[j] == i)
+              sprintf(msgWatch, "MENU No game active\n");
+              bytes = send(i, msgWatch, strlen(msgWatch), 0);
+            }
+            else
+            {
+              for (int j = 0; j < nrPlayers; j++)
               {
-                watchers[j] = 0;
-                sprintf(msgWatch, "Game %d: Score %d -- %d\n", j + 1, players[j].scoreP1, players[j].scoreP2);
-                bytes = send(i, msgWatch, strlen(msgWatch), 0);
+                if (watchers[j] == i)
+                {
+                  watchers[j] = 0;
+                  sprintf(msgWatch, "Game %d: Score %d -- %d\n", j + 1, players[j].scoreP1, players[j].scoreP2);
+                  bytes = send(i, msgWatch, strlen(msgWatch), 0);
+                }
               }
             }
 
@@ -534,7 +550,7 @@ int main(int argc, char *argv[])
                 {
                   sprintf(msgP1, "MENU Congratulations you won the game!\nScore: %d -- %d\n", players[j].scoreP1, players[j].scoreP2);
                   sprintf(msgP2, "MENU Unfortunately you lost the game\nScore: %d -- %d\n", players[j].scoreP1, players[j].scoreP2);
-                  sprintf(msgWatch, "MENU Player 1 won the whole game!\nScore: %d -- %d\n", players[j].scoreP1, players[j].scoreP2);
+                  sprintf(msgWatch, "W-MENU Player 1 won the whole game!\nScore: %d -- %d\n", players[j].scoreP1, players[j].scoreP2);
                   players[j].gameStarted = false;
 
                   for (int k = j; k < nrPlayers - 1; k++)
@@ -542,17 +558,14 @@ int main(int argc, char *argv[])
                     players[k] = players[k + 1];
                     watchers[k] = watchers[k + 1];
                   }
-                  nrPlayers--;
-
-                  //Send watchers back to menu
-                  
+                  nrPlayers--;                  
                 }
 
                 if (players[j].scoreP2 == 3)
                 {
                   sprintf(msgP2, "MENU Congratulations you won the game!\nScore: %d -- %d\n", players[j].scoreP1, players[j].scoreP2);
                   sprintf(msgP1, "MENU Unfortunately you lost the game\nScore: %d -- %d\n", players[j].scoreP1, players[j].scoreP2);
-                  sprintf(msgWatch, "MENU Player 2 won the whole game!\nScore: %d -- %d\n", players[j].scoreP1, players[j].scoreP2);
+                  sprintf(msgWatch, "W-MENU Player 2 won the whole game!\nScore: %d -- %d\n", players[j].scoreP1, players[j].scoreP2);
                   players[j].gameStarted = false;
 
                   for (int k = j; k < nrPlayers - 1; k++)

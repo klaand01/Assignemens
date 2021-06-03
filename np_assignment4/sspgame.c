@@ -184,7 +184,7 @@ int main(int argc, char *argv[])
       if (strcmp(command, "W-MENU") == 0)
       {
         printf("%s\n", temp);
-        strcpy(command, "WATCH"); //Inte färdig
+        numbrBytes = send(clientSocket, "W", strlen("W"), 0);
       }
 
       if (strcmp(command, "W-RESULT") == 0)
