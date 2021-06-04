@@ -71,7 +71,7 @@ int main(int argc, char *argv[])
   {
     readfd = tempfd;
     struct timeval timer;
-    timer.tv_sec = 1;
+    timer.tv_sec = 2;
     timer.tv_usec = 0;
 
     selectBytes = select(clientSocket + 1, &readfd, NULL, NULL, &timer);
@@ -83,45 +83,17 @@ int main(int argc, char *argv[])
     //Select timed out
     if (selectBytes == 0)
     {
-      if (strcmp(command, "COUNT") == 0 || strcmp(command, "W-COUNT") == 0)
+      if (strcmp(command, "GAME") == 0)
       {
-        if (round == 4)
-        {
-          numbrBytes = send(clientSocket, "OVER", strlen("OVER"), 0);
+        numbrBytes = send(clientSocket, "OVER", strlen("OVER"), 0);
 
-          if (strcmp(command, "COUNT") == 0)
-          {
-            strcpy(command, "GAME");
-          }
-          else
-          {
-            strcpy(command, "W");
-          }
-          
-          round = 1;
+        if (strcmp(command, "GAME") == 0)
+        {
+          strcpy(command, "GAME");
         }
         else
         {
-          if (timeCounter == 0)
-          {
-            printf("\nRound %d\n", round++);
-            printf("\n1. Rock\n2. Paper\n3. Scissor\n");
-
-            if (strcmp(command, "COUNT") == 0)
-            {
-              strcpy(command, "GAME");
-            }
-            else
-            {
-              strcpy(command, "W");
-            }
-
-            numbrBytes = send(clientSocket, "GAME", strlen("GAME"), 0);
-          }
-          else
-          {
-            printf("%d seconds to game\n", timeCounter--);
-          }
+          strcpy(command, "W");
         }
       }
     }
@@ -161,19 +133,15 @@ int main(int argc, char *argv[])
         }
       }
 
-      if (strcmp(command, "MSG") == 0 || strcmp(command, "START") == 0)
+      if (strcmp(command, "MSG") == 0 || strcmp(command, "START") == 0 || strcmp(command, "GAME") == 0)
       {
         printf("%s\n", temp);
       }
 
-      if (strcmp(command, "RESULT") == 0)
+      if (strcmp(command, "Seconds") == 0)
       {
-        timeCounter = 3;
-        printf("%s\n", temp);
-        strcpy(command, "COUNT");
+        printf("%s", buf);
       }
-
-      
 
       //Commands "Watch"
       if (strcmp(command, "Game") == 0)
