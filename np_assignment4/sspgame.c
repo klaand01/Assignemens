@@ -153,11 +153,11 @@ int main(int argc, char *argv[])
       {
         if (temp != NULL)
         {
-          printf("%s\n\n1. Play\n2. Watch\n0. Exit\n", temp);
+          printf("%s\n\n1. Play\n2. Watch\n3. Highscore list\n0. Exit\n", temp);
         }
         else
         {
-          printf("\n1. Play\n2. Watch\n0. Exit\n");
+          printf("\n1. Play\n2. Watch\n3. Highscore list\n0. Exit\n");
         }
       }
 
@@ -174,6 +174,7 @@ int main(int argc, char *argv[])
       }
 
       
+
       //Commands "Watch"
       if (strcmp(command, "Game") == 0)
       {

@@ -11,9 +11,11 @@
 #include <string.h>
 #include <stdbool.h>
 
-int nrPlayers = 0, nrWatches = 0;
+int nrPlayers = 0, nrHighscores = 0;
+float highscores[10];
 char command[10], watchers[50];
 char msgP1[80], msgP2[80], msgWatch[80];
+struct timeval serverTimer;
 
 struct games
 {
@@ -21,11 +23,14 @@ struct games
   int answerP1, answerP2;
   int scoreP1, scoreP2;
 
+  float timeP1, timeP2;
+  struct timeval timerForP1, timerForP2;
+
   bool readyP1, readyP2;
   bool gameStarted;
 };
 
-struct games players[50];
+struct games players[80];
 
 void* getAddrs(struct sockaddr* addr)
 {
@@ -93,6 +98,32 @@ void checkWhoWon(int player1, int player2, int index)
   strcpy(command, "RESULT");
 }
 
+int counter;
+
+void sortHighscores()
+{
+  if (nrHighscores <= 1)
+  {
+    return;
+  }
+
+  counter = nrHighscores - 1;
+
+  if (highscores[counter - 1] > highscores[counter])
+  {
+    float temp = highscores[counter - 1];
+    highscores[counter - 1] = highscores[counter];
+    highscores[counter] = temp;
+
+    counter--;
+    sortHighscores();
+  }
+  else
+  {
+    return;
+  }
+}
+
 int main(int argc, char *argv[])
 {
   if (argc != 2)
@@ -113,6 +144,8 @@ int main(int argc, char *argv[])
   int serverSocket, returnValue;
   int current = 1;
   int queue = 5;
+  serverTimer.tv_sec = 0;
+  serverTimer.tv_usec = 0;
 
   struct addrinfo addrs, *ptr, *servinfo;
   memset(&addrs, 0, sizeof(addrs));
@@ -322,6 +355,7 @@ int main(int argc, char *argv[])
 
                   bytes = send(players[j].player2, msgP2, strlen(msgP2), 0);
                   bytes = send(watchers[j], msgWatch, strlen(msgWatch), 0);
+                  players[j].gameStarted = false;
 
                   for (int k = j; k < nrPlayers - 1; k++)
                   {
@@ -340,6 +374,7 @@ int main(int argc, char *argv[])
 
                   bytes = send(players[j].player1, msgP1, strlen(msgP1), 0);
                   bytes = send(watchers[j], msgWatch, strlen(msgWatch), 0);
+                  players[j].gameStarted = false;
 
                   for (int k = j; k < nrPlayers - 1; k++)
                   {
@@ -390,6 +425,14 @@ int main(int argc, char *argv[])
                 players[nrPlayers].scoreP1 = 0;
                 players[nrPlayers].scoreP2 = 0;
 
+                players[nrPlayers].timerForP1.tv_sec = 0;
+                players[nrPlayers].timerForP1.tv_usec = 0;
+                players[nrPlayers].timeP1 = 0.0f;
+
+                players[nrPlayers].timerForP2.tv_sec = 0;
+                players[nrPlayers].timerForP2.tv_usec = 0;
+                players[nrPlayers].timeP2 = 0.0f;
+
                 players[nrPlayers].gameStarted = false;
 
                 bytes = send(players[nrPlayers].player1, "START Press 'R' to start!\n", strlen("START Press 'R' to start!\n"), 0);
@@ -419,6 +462,25 @@ int main(int argc, char *argv[])
               }
 
               strcpy(command, "GAME");
+            }
+
+            //Client chose "Highscore"
+            if (strcmp(input, "3") == 0)
+            {
+              if (nrHighscores != 0)
+              {
+                bytes = send(i, "MENU Highscore\n", strlen("MENU Highscore\n"), 0);
+                
+                for (int j = 0; j < nrHighscores; j++)
+                {
+                  sprintf(msgP1, "Highscore %d: %f\n", j + 1, highscores[j]);
+                  bytes = send(i, msgP1, strlen(msgP1), 0);
+                }
+              }
+              else
+              {
+                bytes = send(i, "MENU No highscores yet\n", strlen("MENU No highscores yet\n"), 0);
+              }
             }
           }
 
@@ -508,6 +570,8 @@ int main(int argc, char *argv[])
 
           if (strcmp(command, "GAME") == 0)
           {
+            gettimeofday(&serverTimer, NULL);
+
             if (strcmp(input, "1") == 0 || strcmp(input, "2") == 0 || strcmp(input, "3") == 0)
             {
               for (int j = 0; j < nrPlayers; j++)
@@ -516,12 +580,18 @@ int main(int argc, char *argv[])
                 {
                   players[j].answerP1 = atoi(input);
                   players[j].readyP1 = true;
+                  
+                  gettimeofday(&players[j].timerForP1, NULL);
+                  players[j].timeP1 += players[j].timerForP1.tv_usec - serverTimer.tv_usec;
                 }
 
                 if (players[j].player2 == i)
                 {
                   players[j].answerP2 = atoi(input);
                   players[j].readyP2 = true;
+
+                  gettimeofday(&players[j].timerForP2, NULL);
+                  players[j].timeP2 += players[j].timerForP2.tv_usec - serverTimer.tv_usec;
                 }
 
                 if (players[j].readyP1 && players[j].readyP2)
@@ -553,6 +623,34 @@ int main(int argc, char *argv[])
                   sprintf(msgWatch, "W-MENU Player 1 won the whole game!\nScore: %d -- %d\n", players[j].scoreP1, players[j].scoreP2);
                   players[j].gameStarted = false;
 
+                  if (players[j].timeP1 > 0.0000)
+                  {
+                    if (nrHighscores != 10)
+                    {
+                      highscores[nrHighscores++] = players[j].timeP1 / 3;
+                      sortHighscores();
+                    }
+                    else if (highscores[9] > (players[j].timeP1 / 3))
+                    {
+                      highscores[9] = players[j].timeP1 / 3;
+                      sortHighscores();
+                    }
+                  }
+
+                  if (players[j].timeP2 > 0.0000)
+                  {
+                    if (nrHighscores != 10)
+                    {
+                      highscores[nrHighscores++] = players[j].timeP2 / 3;
+                      sortHighscores();
+                    }
+                    else if (highscores[9] > (players[j].timeP2 / 3))
+                    {
+                      highscores[9] = players[j].timeP2 / 3;
+                      sortHighscores();
+                    }
+                  }
+                  
                   for (int k = j; k < nrPlayers - 1; k++)
                   {
                     players[k] = players[k + 1];
@@ -567,6 +665,34 @@ int main(int argc, char *argv[])
                   sprintf(msgP1, "MENU Unfortunately you lost the game\nScore: %d -- %d\n", players[j].scoreP1, players[j].scoreP2);
                   sprintf(msgWatch, "W-MENU Player 2 won the whole game!\nScore: %d -- %d\n", players[j].scoreP1, players[j].scoreP2);
                   players[j].gameStarted = false;
+
+                  if (players[j].timeP1 > 0.0000)
+                  {
+                    if (nrHighscores != 10)
+                    {
+                      highscores[nrHighscores++] = players[j].timeP1 / 3;
+                      sortHighscores();
+                    }
+                    else if (highscores[9] > (players[j].timeP1 / 3))
+                    {
+                      highscores[9] = players[j].timeP1 / 3;
+                      sortHighscores();
+                    }
+                  }
+
+                  if (players[j].timeP2 > 0.0000)
+                  {
+                    if (nrHighscores != 10)
+                    {
+                      highscores[nrHighscores++] = players[j].timeP2 / 3;
+                      sortHighscores();
+                    }
+                    else if (highscores[9] > (players[j].timeP2 / 3))
+                    {
+                      highscores[9] = players[j].timeP2 / 3;
+                      sortHighscores();
+                    }
+                  }
 
                   for (int k = j; k < nrPlayers - 1; k++)
                   {
@@ -584,6 +710,9 @@ int main(int argc, char *argv[])
                   sprintf(msgP1, "RESULT Match draw, starting over\nScore: %d -- %d\n", players[j].scoreP1, players[j].scoreP2);
                   sprintf(msgP2, "RESULT Match draw, starting over\nScore: %d -- %d\n", players[j].scoreP1, players[j].scoreP2);
                   sprintf(msgWatch, "W-RESULT Match didn't end, starting over\nScore: %d -- %d\n", players[j].scoreP1, players[j].scoreP2);
+
+                  players[j].timeP1 = 0;
+                  players[j].timeP2 = 0;
                 }
 
                 send(players[j].player1, msgP1, strlen(msgP1), 0);
