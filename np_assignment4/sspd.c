@@ -29,6 +29,7 @@ struct games
 
   bool readyP1, readyP2;
   bool gameStarted;
+  char command[10];
 };
 
 struct games players[80];
@@ -235,147 +236,150 @@ int main(int argc, char *argv[])
     //Select timed out
     if (selectBytes == 0)
     {
-      if (strcmp(command, "COUNT") == 0)
+      for (int i = 0; i < nrPlayers; i++)
       {
-        for (int i = 0; i < nrPlayers; i++)
+        if (strcmp(players[i].command, "COUNT") == 0)
         {
-          if (players[i].gameStarted)
+          for (int j = 0; j < nrPlayers; j++)
           {
-            memset(&msgP1, 0, sizeof(msgP1));
-            memset(&msgP2, 0, sizeof(msgP2));
-            memset(&msgWatch, 0, sizeof(msgWatch));
-
-            //If the game is done
-            if (players[i].rounds == 4)
+            if (players[j].gameStarted)
             {
-              if (players[i].scoreP1 == 3)
+              memset(&msgP1, 0, sizeof(msgP1));
+              memset(&msgP2, 0, sizeof(msgP2));
+              memset(&msgWatch, 0, sizeof(msgWatch));
+
+              //If the game is done
+              if (players[j].rounds == 4)
               {
-                sprintf(msgP1, "MENU Congratulations you won the game!\nScore: %d -- %d\n", players[i].scoreP1, players[i].scoreP2);
-                sprintf(msgP2, "MENU Unfortunately you lost the game\nScore: %d -- %d\n", players[i].scoreP1, players[i].scoreP2);
-                sprintf(msgWatch, "MENU Player 1 won the whole game!\nScore: %d -- %d\n", players[i].scoreP1, players[i].scoreP2);
-                players[i].gameStarted = false;
-
-                if (players[i].timeP1 > 0.0000)
+                if (players[j].scoreP1 == 3)
                 {
-                  if (nrHighscores != 10)
-                  {
-                    highscores[nrHighscores++] = players[i].timeP1 / 3;
-                    sortHighscores();
-                  }
-                  else if (highscores[9] > (players[i].timeP1 / 3))
-                  {
-                    highscores[9] = players[i].timeP1 / 3;
-                    sortHighscores();
-                  }
-                }
+                  sprintf(msgP1, "MENU Congratulations you won the game!\nScore: %d -- %d\n", players[j].scoreP1, players[j].scoreP2);
+                  sprintf(msgP2, "MENU Unfortunately you lost the game\nScore: %d -- %d\n", players[j].scoreP1, players[j].scoreP2);
+                  sprintf(msgWatch, "MENU Player 1 won the whole game!\nScore: %d -- %d\n", players[j].scoreP1, players[j].scoreP2);
+                  players[j].gameStarted = false;
 
-                if (players[i].timeP2 > 0.0000)
-                {
-                  if (nrHighscores != 10)
+                  if (players[j].timeP1 > 0.0000)
                   {
-                    highscores[nrHighscores++] = players[i].timeP2 / 3;
-                    sortHighscores();
+                    if (nrHighscores != 10)
+                    {
+                      highscores[nrHighscores++] = players[j].timeP1 / 3;
+                      sortHighscores();
+                    }
+                    else if (highscores[9] > (players[j].timeP1 / 3))
+                    {
+                      highscores[9] = players[j].timeP1 / 3;
+                      sortHighscores();
+                    }
                   }
-                  else if (highscores[9] > (players[i].timeP2 / 3))
+
+                  if (players[j].timeP2 > 0.0000)
                   {
-                    highscores[9] = players[i].timeP2 / 3;
-                    sortHighscores();
+                    if (nrHighscores != 10)
+                    {
+                      highscores[nrHighscores++] = players[j].timeP2 / 3;
+                      sortHighscores();
+                    }
+                    else if (highscores[9] > (players[j].timeP2 / 3))
+                    {
+                      highscores[9] = players[j].timeP2 / 3;
+                      sortHighscores();
+                    }
                   }
-                }
                   
-                for (int j = i; j < nrPlayers - 1; j++)
-                {
-                  players[j] = players[j + 1];
-                  watchers[j] = watchers[j + 1];
-                }
-                nrPlayers--;                  
-              }
-              else if (players[i].scoreP2 == 3)
-              {
-                sprintf(msgP2, "MENU Congratulations you won the game!\nScore: %d -- %d\n", players[i].scoreP1, players[i].scoreP2);
-                sprintf(msgP1, "MENU Unfortunately you lost the game\nScore: %d -- %d\n", players[i].scoreP1, players[i].scoreP2);
-                sprintf(msgWatch, "MENU Player 2 won the whole game!\nScore: %d -- %d\n", players[i].scoreP1, players[i].scoreP2);
-                players[i].gameStarted = false;
-
-                if (players[i].timeP1 > 0.0000)
-                {
-                  if (nrHighscores != 10)
+                  for (int k = j; k < nrPlayers - 1; k++)
                   {
-                    highscores[nrHighscores++] = players[i].timeP1 / 3;
-                    sortHighscores();
+                    players[k] = players[k + 1];
+                    watchers[k] = watchers[k + 1];
                   }
-                  else if (highscores[9] > (players[i].timeP1 / 3))
-                  {
-                    highscores[9] = players[i].timeP1 / 3;
-                    sortHighscores();
-                  }
+                  nrPlayers--;
                 }
-
-                if (players[i].timeP2 > 0.0000)
+                else if (players[j].scoreP2 == 3)
                 {
-                  if (nrHighscores != 10)
+                  sprintf(msgP2, "MENU Congratulations you won the game!\nScore: %d -- %d\n", players[j].scoreP1, players[j].scoreP2);
+                  sprintf(msgP1, "MENU Unfortunately you lost the game\nScore: %d -- %d\n", players[j].scoreP1, players[j].scoreP2);
+                  sprintf(msgWatch, "MENU Player 2 won the whole game!\nScore: %d -- %d\n", players[j].scoreP1, players[j].scoreP2);
+                  players[j].gameStarted = false;
+
+                  if (players[j].timeP1 > 0.0000)
                   {
-                    highscores[nrHighscores++] = players[i].timeP2 / 3;
-                    sortHighscores();
+                    if (nrHighscores != 10)
+                    {
+                      highscores[nrHighscores++] = players[j].timeP1 / 3;
+                      sortHighscores();
+                    }
+                    else if (highscores[9] > (players[j].timeP1 / 3))
+                    {
+                      highscores[9] = players[j].timeP1 / 3;
+                      sortHighscores();
+                    }
                   }
-                  else if (highscores[9] > (players[i].timeP2 / 3))
+
+                  if (players[j].timeP2 > 0.0000)
                   {
-                    highscores[9] = players[i].timeP2 / 3;
-                    sortHighscores();
+                    if (nrHighscores != 10)
+                    {
+                      highscores[nrHighscores++] = players[j].timeP2 / 3;
+                      sortHighscores();
+                    }
+                    else if (highscores[9] > (players[j].timeP2 / 3))
+                    {
+                      highscores[9] = players[j].timeP2 / 3;
+                      sortHighscores();
+                    }
                   }
+
+                  for (int k = j; k < nrPlayers - 1; k++)
+                  {
+                    players[k] = players[k + 1];
+                    watchers[k] = watchers[k + 1];
+                  }
+                  nrPlayers--;
                 }
 
-                for (int j = i; j < nrPlayers - 1; j++)
+                if (players[j].scoreP1 != 3 && players[j].scoreP2 != 3)
                 {
-                  players[j] = players[j + 1];
-                  watchers[j] = watchers[j + 1];
+                  players[j].scoreP1 = 0;
+                  players[j].scoreP2 = 0;
+
+                  sprintf(msgP1, "COUNT Match draw, starting over\nScore: %d -- %d\n", players[j].scoreP1, players[j].scoreP2);
+                  sprintf(msgP2, "COUNT Match draw, starting over\nScore: %d -- %d\n", players[j].scoreP1, players[j].scoreP2);
+                  sprintf(msgWatch, "WATCH Match didn't end, starting over\nScore: %d -- %d\n", players[j].scoreP1, players[j].scoreP2);
+
+                  players[j].timeP1 = 0;
+                  players[j].timeP2 = 0;
+                  players[j].rounds = 1;
                 }
-                nrPlayers--;
-              }
 
-              if (players[i].scoreP1 != 3 && players[i].scoreP2 != 3)
-              {
-                players[i].scoreP1 = 0;
-                players[i].scoreP2 = 0;
-
-                sprintf(msgP1, "COUNT Match draw, starting over\nScore: %d -- %d\n", players[i].scoreP1, players[i].scoreP2);
-                sprintf(msgP2, "COUNT Match draw, starting over\nScore: %d -- %d\n", players[i].scoreP1, players[i].scoreP2);
-                sprintf(msgWatch, "WATCH Match didn't end, starting over\nScore: %d -- %d\n", players[i].scoreP1, players[i].scoreP2);
-
-                players[i].timeP1 = 0;
-                players[i].timeP2 = 0;
-                players[i].rounds = 1;
-              }
-
-              send(players[i].player1, msgP1, strlen(msgP1), 0);
-              send(players[i].player2, msgP2, strlen(msgP2), 0);
-              send(watchers[i], msgWatch, strlen(msgWatch), 0);
-            }
-            else
-            {
-              if (players[i].timeCounter == 0)
-              {
-                sprintf(msgWatch, "WATCH \nRound %d\n", players[i].rounds);
-                sprintf(msgP1, "GAME \nRound %d\n", players[i].rounds++);
-                bytes = send(players[i].player1, msgP1, strlen(msgP1), 0);
-                bytes = send(players[i].player2, msgP1, strlen(msgP1), 0);
-                bytes = send(watchers[i], msgWatch, strlen(msgWatch), 0);
-
-                sprintf(msgP2, "GAME \n1. Rock\n2. Paper\n3. Scissor\n");
-                bytes = send(players[i].player1, msgP2, strlen(msgP2), 0);
-                bytes = send(players[i].player2, msgP2, strlen(msgP2), 0);
-                bytes = send(watchers[i], "\n1. Rock\n2. Paper\n3. Scissor\n", strlen("\n1. Rock\n2. Paper\n3. Scissor\n"), 0);
-
-                players[i].timeCounter = 3;
-                strcpy(command, " ");
+                send(players[j].player1, msgP1, strlen(msgP1), 0);
+                send(players[j].player2, msgP2, strlen(msgP2), 0);
+                send(watchers[j], msgWatch, strlen(msgWatch), 0);
               }
               else
               {
-                sprintf(msgWatch, "Players have %d seconds to game\n", players[i].timeCounter);
-                sprintf(msgP1, "Seconds to game: %d\n", players[i].timeCounter--);
-                bytes = send(players[i].player1, msgP1, strlen(msgP1), 0);
-                bytes = send(players[i].player2, msgP1, strlen(msgP1), 0);
-                bytes = send(watchers[i], msgWatch, strlen(msgWatch), 0);
+                if (players[j].timeCounter == 0)
+                {
+                  sprintf(msgWatch, "WATCH \nRound %d\n", players[j].rounds);
+                  sprintf(msgP1, "GAME \nRound %d\n", players[j].rounds++);
+                  bytes = send(players[j].player1, msgP1, strlen(msgP1), 0);
+                  bytes = send(players[j].player2, msgP1, strlen(msgP1), 0);
+                  bytes = send(watchers[j], msgWatch, strlen(msgWatch), 0);
+
+                  sprintf(msgP2, "GAME \n1. Rock\n2. Paper\n3. Scissor\n");
+                  bytes = send(players[j].player1, msgP2, strlen(msgP2), 0);
+                  bytes = send(players[j].player2, msgP2, strlen(msgP2), 0);
+                  bytes = send(watchers[j], "\n1. Rock\n2. Paper\n3. Scissor\n", strlen("\n1. Rock\n2. Paper\n3. Scissor\n"), 0);
+
+                  players[j].timeCounter = 3;
+                  strcpy(players[i].command, " ");
+                }
+                else
+                {
+                  sprintf(msgWatch, "Players have %d seconds to game\n", players[j].timeCounter);
+                  sprintf(msgP1, "Seconds to game: %d\n", players[j].timeCounter--);
+                  bytes = send(players[j].player1, msgP1, strlen(msgP1), 0);
+                  bytes = send(players[j].player2, msgP1, strlen(msgP1), 0);
+                  bytes = send(watchers[j], msgWatch, strlen(msgWatch), 0);
+                }
               }
             }
           }
@@ -417,7 +421,6 @@ int main(int argc, char *argv[])
         else
         {
           memset(&buf, 0, sizeof(buf));
-          memset(&command, 0, sizeof(command));
           memset(&input, 0, sizeof(input));
 
           bytes = recv(i, &buf, sizeof(buf), 0);
@@ -441,7 +444,6 @@ int main(int argc, char *argv[])
               if (watchers[j] == i)
               {
                 watchers[j] = 0;
-                strcpy(command, "COUNT");
               }
 
               if (players[j].gameStarted)
@@ -492,7 +494,21 @@ int main(int argc, char *argv[])
           else
           {
             sscanf(buf, "%s %s", command, input);
-            //printf("Sevver comm %s\n", command);
+
+            if (strcmp(command, "COUNT") == 0)
+            {
+              for (int j = 0; j < nrPlayers; j++)
+              {
+                if (players[j].player1 == i)
+                {
+                  strcpy(players[j].command, command);
+                }
+                else if (players[j].player2 == i)
+                {
+                  strcpy(players[j].command, command);
+                }
+              }
+            }
           }
 
           if (strcmp(command, "MENU") == 0)
@@ -572,8 +588,6 @@ int main(int argc, char *argv[])
 
                 bytes = send(i, "\n...or 'q' to go back to menu\n", strlen("\n...or 'q' to go back to menu\n"), 0);
               }
-
-              strcpy(command, "COUNT");
             }
 
             //Client chose "Highscore"
@@ -593,8 +607,6 @@ int main(int argc, char *argv[])
               {
                 bytes = send(i, "MENU No highscores yet\n", strlen("MENU No highscores yet\n"), 0);
               }
-
-              strcpy(command, "COUNT");
             }
           }
 
@@ -621,8 +633,6 @@ int main(int argc, char *argv[])
                 }
               }
             }
-
-            strcpy(command, "COUNT");
           }
 
           //Watchers want out
@@ -649,8 +659,6 @@ int main(int argc, char *argv[])
 
               bytes = send(i, "\n...or 'q' to go back to menu\n", strlen("\n...or 'q' to go back to menu\n"), 0);
             }
-
-            strcpy(command, "COUNT");
           }
 
           //Client wants to leave queue
@@ -686,7 +694,7 @@ int main(int argc, char *argv[])
                 players[j].readyP1 = false;
                 players[j].readyP2 = false;
 
-                strcpy(command, "COUNT");
+                strcpy(players[j].command, "COUNT");
               }
             }
           }

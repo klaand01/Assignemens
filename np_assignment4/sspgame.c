@@ -107,7 +107,6 @@ int main(int argc, char *argv[])
       {
         sscanf(buf, "%s", command);
         temp = strchr(buf, ' ');
-        //printf("Clint comm %s\n", command);
       }
 
       //Commands "Play"
