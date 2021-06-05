@@ -107,6 +107,7 @@ int main(int argc, char *argv[])
       {
         sscanf(buf, "%s", command);
         temp = strchr(buf, ' ');
+        //printf("Clint comm %s\n", command);
       }
 
       //Commands "Play"
@@ -127,9 +128,21 @@ int main(int argc, char *argv[])
         printf("%s\n", temp);
       }
 
-      if (strcmp(command, "Seconds") == 0 || strcmp(command, "Players") == 0)
+      if (strcmp(command, "Seconds") == 0)
       {
         printf("%s", buf);
+        numbrBytes = send(clientSocket, "COUNT", strlen("COUNT"), 0);
+      }
+
+      if (strcmp(command, "Players") == 0)
+      {
+        printf("%s", buf);
+      }
+
+      if (strcmp(command, "COUNT") == 0)
+      {
+        printf("%s", temp);
+        numbrBytes = send(clientSocket, "COUNT", strlen("COUNT"), 0);
       }
 
       //Commands "Watch"
