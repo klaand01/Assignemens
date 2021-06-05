@@ -65,8 +65,6 @@ int main(int argc, char *argv[])
   FD_SET(STDIN, &tempfd);
   FD_SET(clientSocket, &tempfd);
 
-  int timeCounter = 3, round = 1;
-
   while (1)
   {
     readfd = tempfd;
@@ -86,15 +84,6 @@ int main(int argc, char *argv[])
       if (strcmp(command, "GAME") == 0)
       {
         numbrBytes = send(clientSocket, "OVER", strlen("OVER"), 0);
-
-        if (strcmp(command, "GAME") == 0)
-        {
-          strcpy(command, "GAME");
-        }
-        else
-        {
-          strcpy(command, "W");
-        }
       }
     }
 
@@ -138,7 +127,7 @@ int main(int argc, char *argv[])
         printf("%s\n", temp);
       }
 
-      if (strcmp(command, "Seconds") == 0)
+      if (strcmp(command, "Seconds") == 0 || strcmp(command, "Players") == 0)
       {
         printf("%s", buf);
       }
@@ -150,17 +139,9 @@ int main(int argc, char *argv[])
         strcpy(command, "CHOICE");
       }
 
-      if (strcmp(command, "W-MENU") == 0)
+      if (strcmp(command, "WATCH") == 0)
       {
         printf("%s\n", temp);
-        numbrBytes = send(clientSocket, "W", strlen("W"), 0);
-      }
-
-      if (strcmp(command, "W-RESULT") == 0)
-      {
-        timeCounter = 3;
-        printf("%s\n", temp);
-        strcpy(command, "W-COUNT");
       }
     }
 
@@ -172,7 +153,7 @@ int main(int argc, char *argv[])
       
       scanf("%s", buf);
       sprintf(msg, "%s %s\n", command, buf);
-      
+
       //Exit
       if (strcmp(buf, "0") == 0)
       {
