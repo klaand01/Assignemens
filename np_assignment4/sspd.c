@@ -726,21 +726,19 @@ int main(int argc, char *argv[])
               {
                 players[j].scoreP1++;
 
-                sprintf(msgP1, "COUNT You won!\nScore: %d -- %d\n", players[j].scoreP1, players[j].scoreP2);
-                sprintf(msgP2, "COUNT Too long to answer, you lose\nScore: %d -- %d\n", players[j].scoreP1, players[j].scoreP2);
-                sprintf(msgWatch, "WATCH Player 1 won, player 2 took too long\nScore: %d -- %d\n", players[j].scoreP1, players[j].scoreP2);
+                sprintf(msgP1, "COUNT You won!\nScore: %d -- %d\n\n", players[j].scoreP1, players[j].scoreP2);
+                sprintf(msgP2, "COUNT Too long to answer, you lose\nScore: %d -- %d\n\n", players[j].scoreP1, players[j].scoreP2);
+                sprintf(msgWatch, "WATCH Player 1 won, player 2 took too long\nScore: %d -- %d\n\n", players[j].scoreP1, players[j].scoreP2);
               }
-
-              if (players[j].readyP2 && !players[j].readyP1)
+              else if (players[j].readyP2 && !players[j].readyP1)
               {
                 players[j].scoreP2++;
 
-                sprintf(msgP2, "COUNT You won!\nScore: %d -- %d\n", players[j].scoreP1, players[j].scoreP2);
-                sprintf(msgP1, "COUNT Too long to answer, you lose\nScore: %d -- %d\n", players[j].scoreP1, players[j].scoreP2);
-                sprintf(msgWatch, "WATCH Player 2 won, player 1 took too long\nScore: %d -- %d\n", players[j].scoreP1, players[j].scoreP2);
+                sprintf(msgP2, "COUNT You won!\nScore: %d -- %d\n\n", players[j].scoreP1, players[j].scoreP2);
+                sprintf(msgP1, "COUNT Too long to answer, you lose\nScore: %d -- %d\n\n", players[j].scoreP1, players[j].scoreP2);
+                sprintf(msgWatch, "WATCH Player 2 won, player 1 took too long\nScore: %d -- %d\n\n", players[j].scoreP1, players[j].scoreP2);
               }
-
-              if (!players[j].readyP1 && !players[j].readyP2)
+              else if (!players[j].readyP1 && !players[j].readyP2)
               {
                 if (players[j].player1 == i)
                 {
