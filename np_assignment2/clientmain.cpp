@@ -188,7 +188,6 @@ int main(int argc, char *argv[])
   }
 
   timeCounter = 0;
-  sleep(22);
 
   while (timeCounter < 3)
   {

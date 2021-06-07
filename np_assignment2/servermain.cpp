@@ -11,11 +11,11 @@
 #include <netdb.h>
 #include <stdlib.h>
 #include <arpa/inet.h>
+
 //Included to get the support library
 #include <calcLib.h>
 #include "protocol.h"
 
-int loopcount = 0;
 int nrOfClients = 0;
 
 struct clientAddr
@@ -49,8 +49,6 @@ void checkJobList(int signum)
 
     for (int i = 0; i < nrOfClients; i++)
     {
-      printf("Time: %ld\n", compTime.tv_sec - clients[i].time.tv_sec);
-
       if ((compTime.tv_sec - clients[i].time.tv_sec) >= 10)
       {
         removeClient(i);
@@ -239,7 +237,6 @@ int main(int argc, char *argv[])
 
   while(1)
   {
-    printf("This is the main loop, %d times\n", loopcount++);
     memset(cProtocol, 0, sizeof(*cProtocol));
     
     numbytes = recvfrom(serverSocket, cProtocol, sizeof(*cProtocol), 0, (struct sockaddr *)&clientIn, &clientinSize);
@@ -259,6 +256,7 @@ int main(int argc, char *argv[])
 
     if (numbytes == sizeof(calcMessage))
     {
+      printf("Calc Message received\n");
       cMessage = (calcMessage *)cProtocol;
       cMessageNtoH(cMessage);
 
@@ -274,6 +272,7 @@ int main(int argc, char *argv[])
       }
       else
       {
+        printf("Calc message OK\n");
         clients[nrOfClients].clientInfo = &clientIn;
         clients[nrOfClients].ai_addrlen = sizeof(clientinSize);
         clients[nrOfClients].sentMsg = true;
@@ -364,27 +363,29 @@ int main(int argc, char *argv[])
         }
 
         cProtocolHtoN(tempProtocol);
-
+        
+        printf("Sending assignment\n");
         numbytes = sendto(serverSocket, tempProtocol, sizeof(*tempProtocol), 0, (struct sockaddr *)&clientIn, clientinSize);
         if (numbytes == -1)
         {
           perror("Could not send calcProtocol\n");
-          break;
         }
         else
         {
           clients[nrOfClients].clientProtocol = tempProtocol;
-          gettimeofday(&clients[nrOfClients++].time, NULL);
+          gettimeofday(&clients[nrOfClients].time, NULL);
+          nrOfClients++;
         }
       }
     }
     else if (numbytes == sizeof(calcProtocol))
     {
+      printf("Calc Protocol received\n");
       cProtocolNtoH(cProtocol);
 
       for (int i = 0; i < nrOfClients; i++)
       {
-        if (ntohl(clients[i].clientProtocol->id) == cProtocol->id && clients[i].sentMsg)
+        if (clients[i].sentMsg)
         {
           inet_ntop(clientIn.ss_family, getAddr((struct sockaddr *)&clientIn), ipAddr2, sizeof(ipAddr2));  
           inet_ntop(clients[i].clientInfo->ss_family, getAddr((struct sockaddr *)clients[i].clientInfo), ipAddr1, sizeof(ipAddr1));
@@ -396,8 +397,6 @@ int main(int argc, char *argv[])
 
           if (clients[i].clientProtocol->id == cProtocol->id && strcmp(ipAddr1, ipAddr2) == 0 && port1 == port2)
           {
-            printf("Client still the same\n");
-
             dDiff = dRes - cProtocol->flResult;
             iDiff = iRes - cProtocol->inResult;
 
@@ -432,7 +431,17 @@ int main(int argc, char *argv[])
           }
 
           clients[i].sentMsg = false;
+          printf("Removing finished client\n");
           removeClient(i);
+        }
+        else
+        {
+          printf("Client didn't send a calcMessage first\n");
+          numbytes = sendto(serverSocket, &notOkMsg, sizeof(calcMessage), 0, (struct sockaddr *)&clientIn, clientinSize);
+          if (numbytes == -1)
+          {
+            perror("Not ok message not sent\n");
+          }
         }
       }
     }
@@ -450,6 +459,5 @@ int main(int argc, char *argv[])
   delete cProtocol;
   delete cMessage;
   delete tempProtocol;
-  printf("Done\n");
-  return(0);
+  close(serverSocket);
 }
