@@ -192,24 +192,32 @@ int main(int argc, char *argv[])
             int matches = 0;
             regmatch_t items;
 
-            ret = regexec(&regex, arrNames[i], matches, &items, 0);
-
-            if ((strlen(arrNames[i]) <= 12) && (ret == 0))
+            if (strlen(arrNames[i]) <= 12)
             {
-              printf("Nickname is accepted \n");
+              ret = regexec(&regex, arrNames[i], matches, &items, 0);
 
-              sentBytes = send(i, "OK\n", strlen("OK\n"), 0);
-              if (sentBytes == -1)
+              if (ret == 0)
               {
-                perror("Message not sent \n");
-                close(serverSocket);
-                exit(1);
+                printf("Nickname is accepted \n");
+
+                sentBytes = send(i, "OK\n", strlen("OK\n"), 0);
+                if (sentBytes == -1)
+                {
+                  perror("Message not sent \n");
+                  close(serverSocket);
+                  exit(1);
+                }
+              }
+              else
+              {
+	              printf("Name not accepted\n");
+                sentBytes = send(i, "ERROR Name not accepted\n", strlen("ERROR Name not accepted\n"), 0);
               }
             }
             else
             {
-              printf("%s is not accepted \n", arrNames[i]);
-              sentBytes = send(i, "ERROR\n", strlen("ERROR\n"), 0);
+              printf("Name too long\n");
+              sentBytes = send(i, "ERROR Name is too long\n", strlen("ERROR Name is too long\n"), 0);
               if (sentBytes == -1)
               {
                 perror("Message not sent \n");
@@ -239,8 +247,7 @@ int main(int argc, char *argv[])
                     continue;
                   }
                 }
-
-                if (j != serverSocket && j != i)
+                else if (j != serverSocket)
                 {
                   sprintf(msg, "%s:%s", arrNames[i], temp);
 

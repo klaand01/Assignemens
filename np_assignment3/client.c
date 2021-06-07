@@ -49,7 +49,7 @@ int main(int argc, char *argv[])
 
     if (ret == 0)
     {
-	    printf("Nick %s is accepted.\n", name);
+	    printf("OK\n");
     }
     else
     {
