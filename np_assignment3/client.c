@@ -8,7 +8,7 @@
 #include <regex.h>
 #include <unistd.h>
 
-#define MAXDATA 255
+#define MAXDATA 256
 #define STDIN 0
 
 int main(int argc, char *argv[])
@@ -164,7 +164,7 @@ int main(int argc, char *argv[])
     if (FD_ISSET(STDIN, &tempfd))
     {
       fgets(userInput, MAXDATA, stdin);
-      sprintf(buf, "MSG %s", userInput);
+      sprintf(buf, "MSG \n %s", userInput);
 
       numbrBytes = send(clientSocket, buf, strlen(buf), 0);
       if (numbrBytes == -1)

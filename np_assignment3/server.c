@@ -154,6 +154,8 @@ int main(int argc, char *argv[])
         else
         {
           memset(&buf, 0, sizeof(buf));
+          memset(&type, 0, sizeof(type));
+
           recvBytes = recv(i, &buf, sizeof(buf), 0);
           if (recvBytes == -1)
           {
@@ -170,6 +172,7 @@ int main(int argc, char *argv[])
           else
           {
             sscanf(buf, "%s", type);
+            printf("Clint sent: '%s'", buf);
           }
 
           if (strcmp(type, "NICK") == 0)
@@ -244,7 +247,6 @@ int main(int argc, char *argv[])
                   if (sentBytes == -1)
                   {
                     perror("Message not sent \n");
-                    continue;
                   }
                 }
                 else if (j != serverSocket)
@@ -255,14 +257,11 @@ int main(int argc, char *argv[])
                   if (sentBytes == -1)
                   {
                     perror("Message not sent \n");
-                    continue;
                   }
                 }
               }
             }
           }
-          
-          memset(&type, 0, sizeof(type));
         }
       }
     }

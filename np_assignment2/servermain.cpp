@@ -24,7 +24,6 @@ struct clientAddr
   socklen_t ai_addrlen;
   struct calcProtocol *clientProtocol;
   struct timeval time;
-  bool sentMsg;
 };
 
 clientAddr clients[100];
@@ -159,8 +158,8 @@ int main(int argc, char *argv[])
   int current = 1;
   int idCounter = 0;
   char buf[256];
-  int iNumb1, iNumb2, iRes, iDiff;
-  double dNumb1, dNumb2, dRes, dDiff;
+  int iNumb1, iNumb2, iDiff;
+  double dNumb1, dNumb2, dDiff;
 
   char ipAddr1[INET6_ADDRSTRLEN];
   char ipAddr2[INET6_ADDRSTRLEN];
@@ -235,6 +234,11 @@ int main(int argc, char *argv[])
   sockaddr_storage clientIn;
   socklen_t clientinSize = sizeof(clientIn);
 
+  for (int i = 0; i < 100; i++)
+  {
+    clients[i].clientProtocol = new calcProtocol;
+  }
+
   while(1)
   {
     memset(cProtocol, 0, sizeof(*cProtocol));
@@ -275,7 +279,6 @@ int main(int argc, char *argv[])
         printf("Calc message OK\n");
         clients[nrOfClients].clientInfo = &clientIn;
         clients[nrOfClients].ai_addrlen = sizeof(clientinSize);
-        clients[nrOfClients].sentMsg = true;
 
         //Calculations
         char *oper = randomType();
@@ -303,25 +306,25 @@ int main(int argc, char *argv[])
           if (strcmp(oper, "fadd") == 0)
           {
             tempProtocol->arith = 5;
-            dRes = dNumb1 + dNumb2;
+            clients[nrOfClients].clientProtocol->flResult = dNumb1 + dNumb2;
           }
 
           if (strcmp(oper, "fsub") == 0)
           {
             tempProtocol->arith = 6;
-            dRes = dNumb1 - dNumb2;
+            clients[nrOfClients].clientProtocol->flResult = dNumb1 - dNumb2;
           }
 
           if (strcmp(oper, "fmul") == 0)
           {
             tempProtocol->arith = 7;
-            dRes = dNumb1 * dNumb2;
+            clients[nrOfClients].clientProtocol->flResult = dNumb1 * dNumb2;
           }
 
           if (strcmp(oper, "fdiv") == 0)
           {
             tempProtocol->arith = 8;
-            dRes = dNumb1 / dNumb2;
+            clients[nrOfClients].clientProtocol->flResult = dNumb1 / dNumb2;
           }
         }
         else
@@ -340,28 +343,29 @@ int main(int argc, char *argv[])
           if (strcmp(oper, "add") == 0)
           {
             tempProtocol->arith = 1;
-            iRes = iNumb1 + iNumb2;
+            clients[nrOfClients].clientProtocol->inResult = iNumb1 + iNumb2;
           }
 
           if (strcmp(oper, "sub") == 0)
           {
             tempProtocol->arith = 2;
-            iRes = iNumb1 - iNumb2;
+            clients[nrOfClients].clientProtocol->inResult = iNumb1 - iNumb2;
           }
 
           if (strcmp(oper, "mul") == 0)
           {
             tempProtocol->arith = 3;
-            iRes = iNumb1 * iNumb2;
+            clients[nrOfClients].clientProtocol->inResult = iNumb1 * iNumb2;
           }
 
           if (strcmp(oper, "div") == 0)
           {
             tempProtocol->arith = 4;
-            iRes = iNumb1 / iNumb2;
+            clients[nrOfClients].clientProtocol->inResult = iNumb1 / iNumb2;
           }
         }
 
+        clients[nrOfClients].clientProtocol->id = tempProtocol->id;
         cProtocolHtoN(tempProtocol);
         
         printf("Sending assignment\n");
@@ -372,7 +376,6 @@ int main(int argc, char *argv[])
         }
         else
         {
-          clients[nrOfClients].clientProtocol = tempProtocol;
           gettimeofday(&clients[nrOfClients].time, NULL);
           nrOfClients++;
         }
@@ -381,67 +384,43 @@ int main(int argc, char *argv[])
     else if (numbytes == sizeof(calcProtocol))
     {
       printf("Calc Protocol received\n");
+
+      inet_ntop(clientIn.ss_family, getAddr((struct sockaddr *)&clientIn), ipAddr2, sizeof(ipAddr2)); 
+      port1 = getPort((struct sockaddr *)&clientIn);
       cProtocolNtoH(cProtocol);
 
       for (int i = 0; i < nrOfClients; i++)
       {
-        if (clients[i].sentMsg)
+        inet_ntop(clients[i].clientInfo->ss_family, getAddr((struct sockaddr *)clients[i].clientInfo), ipAddr1, sizeof(ipAddr1));
+        port2 = getPort((struct sockaddr *)clients[i].clientInfo);
+
+        if (clients[i].clientProtocol->id == cProtocol->id && strcmp(ipAddr1, ipAddr2) == 0 && port1 == port2)
         {
-          inet_ntop(clientIn.ss_family, getAddr((struct sockaddr *)&clientIn), ipAddr2, sizeof(ipAddr2));  
-          inet_ntop(clients[i].clientInfo->ss_family, getAddr((struct sockaddr *)clients[i].clientInfo), ipAddr1, sizeof(ipAddr1));
+          dDiff = clients[i].clientProtocol->flResult - cProtocol->flResult;
+          iDiff = clients[i].clientProtocol->inResult - cProtocol->inResult;
 
-          port1 = getPort((struct sockaddr *)&clientIn);
-          port2 = getPort((struct sockaddr *)clients[i].clientInfo);
-
-          cProtocolNtoH(clients[i].clientProtocol);
-
-          if (clients[i].clientProtocol->id == cProtocol->id && strcmp(ipAddr1, ipAddr2) == 0 && port1 == port2)
+          if (dDiff < 0.0001 || iDiff < 0.0001)
           {
-            dDiff = dRes - cProtocol->flResult;
-            iDiff = iRes - cProtocol->inResult;
-
-            if (dDiff < 0.0001 || iDiff < 0.0001)
+            printf("Correct answer\n");
+            numbytes = sendto(serverSocket, &okMsg, sizeof(calcMessage), 0, (struct sockaddr *)clients[i].clientInfo, clientinSize);
+            if (numbytes == -1)
             {
-              printf("Correct answer\n");
-              numbytes = sendto(serverSocket, &okMsg, sizeof(calcMessage), 0, (struct sockaddr *)&clientIn, clientinSize);
-              if (numbytes == -1)
-              {
-                perror("Answer not sent\n");
-              }
-            }
-            else
-            {
-              printf("Not correct answer\n");
-              numbytes = sendto(serverSocket, &notOkMsg, sizeof(calcMessage), 0, (struct sockaddr*)&clientIn, clientinSize);
-              if (numbytes == -1)
-              {
-                perror("Correction not sent\n");
-                break;
-              }
+              perror("Answer not sent\n");
             }
           }
           else
           {
-            printf("Wrong client\n");
-            numbytes = sendto(serverSocket, &notOkMsg, sizeof(calcMessage), 0, (struct sockaddr*)&clientIn, clientinSize);
+            printf("Not correct answer\n");
+            numbytes = sendto(serverSocket, &notOkMsg, sizeof(calcMessage), 0, (struct sockaddr *)clients[i].clientInfo, clientinSize);
             if (numbytes == -1)
             {
-              perror("Not ok message not sent\n");
+              perror("Correction not sent\n");
+              break;
             }
           }
 
-          clients[i].sentMsg = false;
           printf("Removing finished client\n");
           removeClient(i);
-        }
-        else
-        {
-          printf("Client didn't send a calcMessage first\n");
-          numbytes = sendto(serverSocket, &notOkMsg, sizeof(calcMessage), 0, (struct sockaddr *)&clientIn, clientinSize);
-          if (numbytes == -1)
-          {
-            perror("Not ok message not sent\n");
-          }
         }
       }
     }

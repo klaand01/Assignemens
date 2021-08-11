@@ -65,6 +65,8 @@ int main(int argc, char *argv[])
   time.tv_sec = 2;
   time.tv_usec = 0;
 
+  const int clints = 50;
+
   returnValue = setsockopt(clientSocket, SOL_SOCKET, SO_RCVTIMEO, &time, sizeof(time));
   if (returnValue == -1)
   {
@@ -72,7 +74,6 @@ int main(int argc, char *argv[])
     exit(1);
   }
 
-  calcProtocol *proPtr = new calcProtocol;
   struct calcMessage cMessage;
   cMessage.type = htons(22);
   cMessage.message = htonl(0);
@@ -80,147 +81,169 @@ int main(int argc, char *argv[])
   cMessage.major_version = htons(1);
   cMessage.minor_version = htons(0);
 
-  while (timeCounter < 3)
-  {
-    sentBytes = sendto(clientSocket, &cMessage, sizeof(cMessage), 0, ptr->ai_addr, ptr->ai_addrlen);
-    if (sentBytes == -1)
-    {
-      perror("Message not sent \n");
-    }
-    else
-    {
-      printf("Message sent \n");
-    }
+  calcProtocol *proPtr = new calcProtocol;
+  struct calcProtocol cP[clints];  
 
-    //Caclprotocol
-    sentBytes = recvfrom(clientSocket, proPtr, sizeof(*proPtr), 0, ptr->ai_addr, &ptr->ai_addrlen);
-    if (sentBytes == -1)
+  for (int i = 0; i < clints; i++)
+  {
+    while (timeCounter < 3)
     {
-      if (errno == EAGAIN)
+      sentBytes = sendto(clientSocket, &cMessage, sizeof(cMessage), 0, ptr->ai_addr, ptr->ai_addrlen);
+      if (sentBytes == -1)
       {
-        timeCounter++;
-        printf("Message not recevied on time \n");
-        printf("Timecounter: %d \n", timeCounter);
+        perror("Message not sent \n");
+      }
+      else
+      {
+        printf("Message sent \n");
+      }
+
+      //Caclprotocol
+      sentBytes = recvfrom(clientSocket, &cP[i], sizeof(cP[i]), 0, ptr->ai_addr, &ptr->ai_addrlen);
+      if (sentBytes == -1)
+      {
+        if (errno == EAGAIN)
+        {
+          timeCounter++;
+          printf("Message not recevied on time \n");
+          printf("Timecounter: %d \n", timeCounter);
+        }
+      }
+      else
+      {
+        printf("Message received \n");
+        timeCounter = 0;
+        break;
       }
     }
-    else
+    if (timeCounter == 3)
     {
-      printf("Message received \n");
-      timeCounter = 5;
-    }
-  }
-  if (timeCounter == 3)
-  {
-    printf("Closing down \n");
-    exit(1);
-  }
-
-  if (ntohl(cMessage.message) == 2)
-  {
-    printf("NOT OK \n");
-    exit(1);
-  }
-
-  //Calcprotocol calculations
-  operNumbr = ntohl(proPtr->arith);
-
-  if ((operNumbr >= 1) && (operNumbr <= 4))
-  {
-    iNumb1 = ntohl(proPtr->inValue1);
-    iNumb2 = ntohl(proPtr->inValue2);
-
-    switch (operNumbr)
-    {
-      case 1:
-      iRes = iNumb1 + iNumb2;
-      printf("ASSIGNMENT: add %d %d \n", iNumb1, iNumb2);
-      break;
-
-      case 2:
-      iRes = iNumb1 - iNumb2;
-      printf("ASSIGNMENT: sub %d %d \n", iNumb1, iNumb2);
-      break;
-
-      case 3:
-      iRes = iNumb1 * iNumb2;
-      printf("ASSIGNMENT: mul %d %d \n", iNumb1, iNumb2);
-      break;
-
-      case 4:
-      iRes = iNumb1 / iNumb2;
-      printf("ASSIGNMENT: div %d %d \n", iNumb1, iNumb2);
-      break;
+      printf("Closing down \n");
+      exit(1);
     }
 
-    printf("Result: %d \n", iRes);
-    proPtr->inResult = htonl(iRes);
-  }
-  else if ((operNumbr >= 5) && (operNumbr <= 8))
-  {
-    dNumb1 = proPtr->flValue1;
-    dNumb2 = proPtr->flValue2;
-
-    switch (operNumbr)
+    if (ntohl(cMessage.message) == 2)
     {
-      case 5:
-      dRes = dNumb1 + dNumb2;
-      printf("ASSIGNMENT: fadd %f %f \n", dNumb1, dNumb2);
-      break;
-
-      case 6:
-      dRes = dNumb1 - dNumb2;
-      printf("ASSIGNMENT: fsub %f %f \n", dNumb1, dNumb2);
-      break;
-
-      case 7:
-      dRes = dNumb1 * dNumb2;
-      printf("ASSIGNMENT: fmul %f %f \n", dNumb1, dNumb2);
-      break;
-
-      case 8:
-      dRes = dNumb1 / dNumb2;
-      printf("ASSIGNMENT: fdiv %f %f \n", dNumb1, dNumb2);
-      break;
+      printf("NOT OK \n");
+      exit(1);
     }
-
-    printf("Result: %f \n", dRes);
-    proPtr->flResult = dRes;
   }
 
-  timeCounter = 0;
 
-  while (timeCounter < 3)
+
+  
+
+  for (int i = 0; i < clints; i++)
   {
-    sentBytes = sendto(clientSocket, proPtr, sizeof(*proPtr), 0, ptr->ai_addr, ptr->ai_addrlen);
-    if (sentBytes == -1)
-    {
-      perror("Answer not sent \n");
-    }
-    else
-    {
-      printf("Answer sent \n");
-    }
+    operNumbr = ntohl(cP[i].arith);
 
-    sentBytes = recvfrom(clientSocket, &cMessage, sizeof(cMessage), 0, ptr->ai_addr, &ptr->ai_addrlen);
-    if (sentBytes == -1)
+    cP[i].id = ntohl(cP[i].id);
+    printf("Server id %d \n", cP[i].id);
+    cP[i].id = htonl(cP[i].id);
+
+
+    if ((operNumbr >= 1) && (operNumbr <= 4))
     {
-      if (errno == EAGAIN)
+      iNumb1 = ntohl(cP[i].inValue1);
+      iNumb2 = ntohl(cP[i].inValue2);
+
+      switch (operNumbr)
       {
-        timeCounter++;
-        perror("Message not received on time \n");
+        case 1:
+        iRes = iNumb1 + iNumb2;
+        printf("ASSIGNMENT: add %d %d \n", iNumb1, iNumb2);
+        break;
+
+        case 2:
+        iRes = iNumb1 - iNumb2;
+        printf("ASSIGNMENT: sub %d %d \n", iNumb1, iNumb2);
+        break;
+
+        case 3:
+        iRes = iNumb1 * iNumb2;
+        printf("ASSIGNMENT: mul %d %d \n", iNumb1, iNumb2);
+        break;
+
+        case 4:
+        iRes = iNumb1 / iNumb2;
+        printf("ASSIGNMENT: div %d %d \n", iNumb1, iNumb2);
+        break;
+      }
+
+      printf("Result: %d \n", iRes);
+      cP[i].inResult = htonl(iRes);
+    }
+    else if ((operNumbr >= 5) && (operNumbr <= 8))
+    {
+      dNumb1 = cP[i].flValue1;
+      dNumb2 = cP[i].flValue2;
+
+      switch (operNumbr)
+      {
+        case 5:
+        dRes = dNumb1 + dNumb2;
+        printf("ASSIGNMENT: fadd %f %f \n", dNumb1, dNumb2);
+        break;
+
+        case 6:
+        dRes = dNumb1 - dNumb2;
+        printf("ASSIGNMENT: fsub %f %f \n", dNumb1, dNumb2);
+        break;
+
+        case 7:
+        dRes = dNumb1 * dNumb2;
+        printf("ASSIGNMENT: fmul %f %f \n", dNumb1, dNumb2);
+        break;
+
+        case 8:
+        dRes = dNumb1 / dNumb2;
+        printf("ASSIGNMENT: fdiv %f %f \n", dNumb1, dNumb2);
+        break;
+      }
+
+      printf("Result: %f \n", dRes);
+      cP[i].flResult = dRes;
+    }
+
+
+    timeCounter = 0;
+
+    while (timeCounter < 3)
+    {
+      sentBytes = sendto(clientSocket, &cP[i], sizeof(cP[i]), 0, ptr->ai_addr, ptr->ai_addrlen);
+      if (sentBytes == -1)
+      {
+        perror("Answer not sent \n");
+      }
+      else
+      {
+        printf("Answer sent \n");
+      }
+
+      sentBytes = recvfrom(clientSocket, &cMessage, sizeof(cMessage), 0, ptr->ai_addr, &ptr->ai_addrlen);
+      if (sentBytes == -1)
+      {
+        if (errno == EAGAIN)
+        {
+          timeCounter++;
+          perror("Message not received on time \n");
+        }
+      }
+      else
+      {
+        timeCounter = 0;
+        printf("Message received \n");
+        break;
       }
     }
-    else
+    if (timeCounter == 3)
     {
-      timeCounter = 5;
-      printf("Message received \n");
+      printf("Closing down \n");
+      exit(1);
     }
+    
   }
-  if (timeCounter == 3)
-  {
-    printf("Closing down \n");
-    exit(1);
-  }
+
 
   char myAddress[20];
 	const char *myAdd;
@@ -232,7 +255,7 @@ int main(int argc, char *argv[])
 
   printf("Connected to %s:%d local %s:%d \n", Desthost, port,
   myAdd, ntohs(sockAddrss.sin_port));
-
+  
   if (ntohl(cMessage.message) == 1)
   {
     printf("OK \n");
