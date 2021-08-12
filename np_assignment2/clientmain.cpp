@@ -65,7 +65,7 @@ int main(int argc, char *argv[])
   time.tv_sec = 2;
   time.tv_usec = 0;
 
-  const int clints = 50;
+  const int clints = 10;
 
   returnValue = setsockopt(clientSocket, SOL_SOCKET, SO_RCVTIMEO, &time, sizeof(time));
   if (returnValue == -1)
@@ -130,7 +130,7 @@ int main(int argc, char *argv[])
   }
 
 
-
+  sleep(30);
   
 
   for (int i = 0; i < clints; i++)
@@ -241,7 +241,17 @@ int main(int argc, char *argv[])
       printf("Closing down \n");
       exit(1);
     }
-    
+
+
+    if (ntohl(cMessage.message) == 1)
+    {
+      printf("OK \n");
+    }
+
+    if (ntohl(cMessage.message) == 2)
+    {
+      printf("NOT OK \n");
+    }    
   }
 
 
@@ -255,18 +265,6 @@ int main(int argc, char *argv[])
 
   printf("Connected to %s:%d local %s:%d \n", Desthost, port,
   myAdd, ntohs(sockAddrss.sin_port));
-  
-  if (ntohl(cMessage.message) == 1)
-  {
-    printf("OK \n");
-    exit(1);
-  }
-
-  if (ntohl(cMessage.message) == 2)
-  {
-    printf("NOT OK \n");
-    exit(1);
-  }
   
   close(clientSocket);
 }
