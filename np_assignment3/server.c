@@ -172,7 +172,6 @@ int main(int argc, char *argv[])
           else
           {
             sscanf(buf, "%s", type);
-            printf("Clint sent: '%s'", buf);
           }
 
           if (strcmp(type, "NICK") == 0)
@@ -235,31 +234,39 @@ int main(int argc, char *argv[])
           if (strcmp(type, "MSG") == 0)
           {
             temp = strchr(buf, ' ');
+            temp = strtok(temp, "\n");
 
-            for (int j = 0; j <= maxfd; j++)
+            while (temp != NULL)
             {
-              if (FD_ISSET(j, &readfd))
+              for (int j = 0; j <= maxfd; j++)
               {
-                if (j == i)
+                if (FD_ISSET(j, &readfd))
                 {
-                  sprintf(msg, "MSG %s %s", arrNames[i], temp);
-                  sentBytes = send(i, msg, strlen(msg), 0);
-                  if (sentBytes == -1)
+                  if (j == i)
                   {
-                    perror("Message not sent \n");
+                    sprintf(msg, "MSG %s %s\n", arrNames[i], temp);
+                    sentBytes = send(i, msg, strlen(msg), 0);
+                    if (sentBytes == -1)
+                    {
+                      perror("Message not sent \n");
+                    }
                   }
-                }
-                else if (j != serverSocket)
-                {
-                  sprintf(msg, "%s:%s", arrNames[i], temp);
-
-                  sentBytes = send(j, msg, strlen(msg), 0);
-                  if (sentBytes == -1)
+                  else if (j != serverSocket)
                   {
-                    perror("Message not sent \n");
+                    sprintf(msg, "%s:%s\n", arrNames[i], temp);
+
+                    sentBytes = send(j, msg, strlen(msg), 0);
+                    if (sentBytes == -1)
+                    {
+                      perror("Message not sent \n");
+                    }
                   }
                 }
               }
+
+              temp = strtok(NULL, "MSG");
+              temp = strtok(NULL, " ");
+              temp = strtok(NULL, "\n");
             }
           }
         }
