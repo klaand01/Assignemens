@@ -34,19 +34,25 @@ void removeClients()
 {
   for (int i = 0; i < nrOfClients; i++)
   {
-    while (clients[i].readyToMove)
+    if (clients[i].readyToMove && i == nrOfClients - 1)
     {
-      clients[i] = clients[--nrOfClients];
-    } 
+      nrOfClients--;
+    }
+    else
+    {
+      while (clients[i].readyToMove)
+      {
+        clients[i] = clients[--nrOfClients];
+      }
+    }
   }
 }
 
 void checkJobList(int signum)
 {
-  printf("Updating client list\n");
-
   if (signum == SIGALRM)
   {
+    printf("Updating client list\n");
     struct timeval compTime;
     gettimeofday(&compTime, NULL);
 
@@ -161,7 +167,6 @@ int main(int argc, char *argv[])
   struct addrinfo addrs, *servinfo, *ptr;
   int returnValue, serverSocket, numbytes;
   int current = 1;
-  char buf[256];
   int iNumb1, iNumb2, iDiff;
   double dNumb1, dNumb2, dDiff;
 
@@ -289,8 +294,6 @@ int main(int argc, char *argv[])
         tempProtocol->minor_version = 0;
         tempProtocol->id = idCounter++;
 
-        memset(buf, 0, sizeof(buf));
-
         if (oper[0] == 'f')
         {
           dNumb1 = randomFloat();
@@ -384,8 +387,7 @@ int main(int argc, char *argv[])
     }
     else if (numbytes == sizeof(calcProtocol))
     {
-      printf("Protocol received\n");
-      clientFound = false;
+      printf("Calc Protocol received\n");
 
       inet_ntop(clientIn.ss_family, getAddr((struct sockaddr *)&clientIn), ipAddr2, sizeof(ipAddr2)); 
       port1 = getPort((struct sockaddr *)&clientIn);
@@ -402,37 +404,65 @@ int main(int argc, char *argv[])
           dDiff = clients[i].clientProtocol->flResult - cProtocol->flResult;
           iDiff = clients[i].clientProtocol->inResult - cProtocol->inResult;
 
-          if (dDiff < 0.0001 || iDiff < 0.0001)
+          if (cProtocol->arith < 5)
           {
-            printf("Correct answer\n");
-            numbytes = sendto(serverSocket, &okMsg, sizeof(calcMessage), 0, (struct sockaddr *)clients[i].clientInfo, clientinSize);
-            if (numbytes == -1)
+            if (0.0000 < iDiff && iDiff < 0.0001)
             {
-              perror("Answer not sent\n");
+              printf("Correct answer\n");
+              numbytes = sendto(serverSocket, &okMsg, sizeof(calcMessage), 0, (struct sockaddr *)clients[i].clientInfo, clientinSize);
+              if (numbytes == -1)
+              {
+                perror("Answer not sent\n");
+              }
+            }
+            else
+            {
+              printf("Wrong answer\n");
+              numbytes = sendto(serverSocket, &notOkMsg, sizeof(calcMessage), 0, (struct sockaddr *)clients[i].clientInfo, clientinSize);
+              if (numbytes == -1)
+              {
+                perror("Correction not sent\n");
+                break;
+              }
             }
           }
           else
           {
-            printf("Wrong answer\n");
-            numbytes = sendto(serverSocket, &notOkMsg, sizeof(calcMessage), 0, (struct sockaddr *)clients[i].clientInfo, clientinSize);
-            if (numbytes == -1)
+            if (0.0000 < dDiff && dDiff < 0.0001)
             {
-              perror("Correction not sent\n");
-              break;
+              printf("Correct answer\n");
+              numbytes = sendto(serverSocket, &okMsg, sizeof(calcMessage), 0, (struct sockaddr *)clients[i].clientInfo, clientinSize);
+              if (numbytes == -1)
+              {
+                perror("Answer not sent\n");
+              }
+            }
+            else
+            {
+              printf("Wrong answer\n");
+              numbytes = sendto(serverSocket, &notOkMsg, sizeof(calcMessage), 0, (struct sockaddr *)clients[i].clientInfo, clientinSize);
+              if (numbytes == -1)
+              {
+                perror("Correction not sent\n");
+                break;
+              }
             }
           }
 
-          printf("Removing finished client\n");
           clients[i].readyToMove = true;
-          removeClients();
+          break;
         }
       }
+
+      printf("Removing finished client\n");
+      removeClients();
 
       if (!clientFound)
       {
         printf("Client not in list\n");
         numbytes = sendto(serverSocket, &notOkMsg, sizeof(calcMessage), 0, (struct sockaddr *)&clientIn, clientinSize);
       }
+      clientFound = false;
     }
     else
     {
@@ -448,5 +478,11 @@ int main(int argc, char *argv[])
   delete cProtocol;
   delete cMessage;
   delete tempProtocol;
+
+  for (int i = 0; i < 100; i++)
+  {
+    delete clients[i].clientProtocol;
+  }
+
   close(serverSocket);
 }

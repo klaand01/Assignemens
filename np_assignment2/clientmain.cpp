@@ -130,7 +130,7 @@ int main(int argc, char *argv[])
   }
 
 
-  sleep(30);
+  //sleep(30);
   
 
   for (int i = 0; i < clints; i++)
@@ -170,7 +170,14 @@ int main(int argc, char *argv[])
         break;
       }
 
-      printf("Result: %d \n", iRes);
+      printf("SHOULD BE Result: %d \n", iRes);
+
+      iRes = 0;
+
+      
+
+      printf("IS Result: %d \n", iRes);
+
       cP[i].inResult = htonl(iRes);
     }
     else if ((operNumbr >= 5) && (operNumbr <= 8))
@@ -202,6 +209,7 @@ int main(int argc, char *argv[])
       }
 
       printf("Result: %f \n", dRes);
+
       cP[i].flResult = dRes;
     }
 
