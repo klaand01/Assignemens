@@ -102,7 +102,7 @@ int main(int argc, char *argv[])
 
   int clientSocket, sentBytes, recvBytes;
   char buf[MAXDATA], msg[MAXDATA];
-  char *temp;
+  char *temp, tempArr[256], temperArr[256];
   char arrNames[50][100], type[20];
 
   fd_set readfd;
@@ -233,8 +233,10 @@ int main(int argc, char *argv[])
 
           if (strcmp(type, "MSG") == 0)
           {
-            temp = strchr(buf, ' ');
-            temp = strtok(temp, "\n");
+            temp = strstr(buf, " ");
+            strcpy(tempArr, temp);
+            strcpy(temperArr, temp);
+            temp = strtok(tempArr, "\n");
 
             while (temp != NULL)
             {
@@ -264,9 +266,22 @@ int main(int argc, char *argv[])
                 }
               }
 
-              temp = strtok(NULL, "MSG");
-              temp = strtok(NULL, " ");
-              temp = strtok(NULL, "\n");
+              temp = strstr(temperArr, "MSG");
+
+              if (temp == NULL)
+              {
+                break;
+              }
+              strcpy(tempArr, temp);
+              temp = strstr(tempArr, " ");
+
+              if (temp == NULL)
+              {
+                break;
+              }
+              strcpy(tempArr, temp);
+              strcpy(temperArr, temp);
+              temp = strtok(tempArr, "\n");
             }
           }
         }

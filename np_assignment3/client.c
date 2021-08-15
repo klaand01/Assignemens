@@ -164,7 +164,7 @@ int main(int argc, char *argv[])
     if (FD_ISSET(STDIN, &tempfd))
     {
       fgets(userInput, MAXDATA, stdin);
-      sprintf(buf, "MSG %s \n MSG sa jag\n", userInput);
+      sprintf(buf, "MSG %s \n", userInput);
 
       numbrBytes = send(clientSocket, buf, strlen(buf), 0);
       if (numbrBytes == -1)
