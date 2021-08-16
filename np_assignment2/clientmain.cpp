@@ -65,7 +65,7 @@ int main(int argc, char *argv[])
   time.tv_sec = 2;
   time.tv_usec = 0;
 
-  const int clints = 10;
+  const int nrClients = 10;
 
   returnValue = setsockopt(clientSocket, SOL_SOCKET, SO_RCVTIMEO, &time, sizeof(time));
   if (returnValue == -1)
@@ -82,9 +82,9 @@ int main(int argc, char *argv[])
   cMessage.minor_version = htons(0);
 
   calcProtocol *proPtr = new calcProtocol;
-  struct calcProtocol cP[clints];  
+  struct calcProtocol cP[nrClients];  
 
-  for (int i = 0; i < clints; i++)
+  for (int i = 0; i < nrClients; i++)
   {
     while (timeCounter < 3)
     {
@@ -127,20 +127,11 @@ int main(int argc, char *argv[])
       printf("NOT OK \n");
       exit(1);
     }
-  }
+  }  
 
-
-  //sleep(30);
-  
-
-  for (int i = 0; i < clints; i++)
+  for (int i = 0; i < nrClients; i++)
   {
     operNumbr = ntohl(cP[i].arith);
-
-    cP[i].id = ntohl(cP[i].id);
-    printf("Server id %d \n", cP[i].id);
-    cP[i].id = htonl(cP[i].id);
-
 
     if ((operNumbr >= 1) && (operNumbr <= 4))
     {
@@ -169,14 +160,6 @@ int main(int argc, char *argv[])
         printf("ASSIGNMENT: div %d %d \n", iNumb1, iNumb2);
         break;
       }
-
-      printf("SHOULD BE Result: %d \n", iRes);
-
-      iRes = 0;
-
-      
-
-      printf("IS Result: %d \n", iRes);
 
       cP[i].inResult = htonl(iRes);
     }

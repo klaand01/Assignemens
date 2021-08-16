@@ -406,7 +406,7 @@ int main(int argc, char *argv[])
 
           if (cProtocol->arith < 5)
           {
-            if (0.0000 < iDiff && iDiff < 0.0001)
+            if (0 <= iDiff && iDiff <= 0.0001)
             {
               printf("Correct answer\n");
               numbytes = sendto(serverSocket, &okMsg, sizeof(calcMessage), 0, (struct sockaddr *)clients[i].clientInfo, clientinSize);
@@ -428,7 +428,7 @@ int main(int argc, char *argv[])
           }
           else
           {
-            if (0.0000 < dDiff && dDiff < 0.0001)
+            if (0 <= dDiff && dDiff <= 0.0001)
             {
               printf("Correct answer\n");
               numbytes = sendto(serverSocket, &okMsg, sizeof(calcMessage), 0, (struct sockaddr *)clients[i].clientInfo, clientinSize);
